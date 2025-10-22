@@ -1,0 +1,124 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>
+                <% if (user.role === 'fuel-station') { %>
+                    ⛽ Fuel Station Dashboard
+                <% } else { %>
+                    🔧 Mechanic Dashboard
+                <% } %>
+            </h2>
+            <p class="text-muted">Welcome, <%= provider.businessName %>!</p>
+        </div>
+    </div>
+
+    <!-- Business Info Card -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Business Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Business Name:</strong> <%= provider.businessName %></p>
+                    <p><strong>Address:</strong> <%= provider.address %></p>
+                    <p><strong>Phone:</strong> <%= provider.phone %></p>
+                    <p><strong>Email:</strong> <%= provider.email %></p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-success">Verified</span>
+                        <span class="badge bg-primary">Available</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pricing</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Assistance Fee:</strong> ₹<%= provider.pricing.assistanceFee %></p>
+                    <p><strong>Travel Fee:</strong> ₹<%= provider.pricing.travelFeePerKm %> per km</p>
+                    
+                    <% if (user.role === 'fuel-station') { %>
+                        <hr>
+                        <h6>Fuel Prices:</h6>
+                        <% if (provider.pricing.fuelPrices.petrol > 0) { %>
+                            <p class="mb-1">Petrol: ₹<%= provider.pricing.fuelPrices.petrol %>/L</p>
+                        <% } %>
+                        <% if (provider.pricing.fuelPrices.diesel > 0) { %>
+                            <p class="mb-1">Diesel: ₹<%= provider.pricing.fuelPrices.diesel %>/L</p>
+                        <% } %>
+                        <% if (provider.pricing.fuelPrices.cng > 0) { %>
+                            <p class="mb-1">CNG: ₹<%= provider.pricing.fuelPrices.cng %>/kg</p>
+                        <% } %>
+                    <% } else { %>
+                        <hr>
+                        <h6>Services:</h6>
+                        <p class="mb-0"><%= provider.services.join(', ') %></p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nearby Requests -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Nearby Service Requests</h5>
+                </div>
+                <div class="card-body">
+                    <% if (nearbyRequests && nearbyRequests.length > 0) { %>
+                        <div class="list-group">
+                            <% nearbyRequests.forEach(request => { %>
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <%= request.serviceType === 'fuel' ? '⛽' : '🔧' %>
+                                            <%= request.serviceType.charAt(0).toUpperCase() + request.serviceType.slice(1) %> Assistance
+                                        </h6>
+                                        <small class="text-muted">
+                                            <%= new Date(request.createdAt).toLocaleString() %>
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">
+                                        <strong>Customer:</strong> <%= request.user.name %> (<%= request.user.phone %>)
+                                    </p>
+                                    <% if (request.serviceType === 'fuel') { %>
+                                        <p class="mb-1">
+                                            <strong>Fuel:</strong> <%= request.quantity %>L <%= request.fuelType %>
+                                        </p>
+                                    <% } else { %>
+                                        <p class="mb-1">
+                                            <strong>Problem:</strong> <%= request.problemDescription %>
+                                        </p>
+                                    <% } %>
+                                    <p class="mb-1">
+                                        <strong>Estimated Cost:</strong> ₹<%= request.costEstimate.totalCost %>
+                                    </p>
+                                    <div class="mt-2">
+                                        <button class="btn btn-success btn-sm">Accept Request</button>
+                                        <button class="btn btn-outline-secondary btn-sm">View Details</button>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-4">
+                            <p class="text-muted">No nearby service requests at the moment.</p>
+                            <p class="small text-muted">Requests from travelers near your location will appear here.</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

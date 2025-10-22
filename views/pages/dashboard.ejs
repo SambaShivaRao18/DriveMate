@@ -1,0 +1,277 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<main class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Dashboard</h2>
+            <p class="text-muted">Welcome back, <%= user.name %>!</p>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <% if (success) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <%= success %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <div id="alertContainer"></div>
+
+    <% if (user.role === 'traveller') { %>
+        <!-- Traveller Dashboard -->
+        <div class="row mt-4">
+            <div class="col-md-6 mb-4">
+                <div class="card service-card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">⛽ Fuel Assistance</h5>
+                        <p class="card-text">Get fuel delivered to your location</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fuelModal">
+                            Request Fuel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card service-card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">🔧 Mechanical Help</h5>
+                        <p class="card-text">Find nearby mechanics</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mechanicModal">
+                            Request Mechanic
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Requests Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">My Service Requests</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="requestsList">
+                            <p class="text-muted">Loading your requests...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <% } else if (user.role === 'fuel-station' || user.role === 'mechanic') { %>
+        <!-- Provider Dashboard Redirect Notice -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5>Provider Account Detected</h5>
+                        <p>You are registered as a <%= user.role === 'fuel-station' ? 'Fuel Station' : 'Mechanic' %>.</p>
+                        <a href="/provider/dashboard" class="btn btn-primary">
+                            Go to Provider Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <% } else if (user.role === 'admin') { %>
+        <!-- Admin Dashboard -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Admin Panel</h5>
+            </div>
+            <div class="card-body">
+                <p>Admin dashboard coming soon...</p>
+            </div>
+        </div>
+    <% } %>
+</main>
+
+<!-- Fuel Request Modal -->
+<div class="modal fade" id="fuelModal" tabindex="-1" aria-labelledby="fuelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fuelModalLabel">⛽ Request Fuel Assistance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="fuelForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Fuel Type *</label>
+                                <select class="form-select" name="fuelType" required>
+                                    <option value="">Select Fuel Type</option>
+                                    <option value="petrol">Petrol</option>
+                                    <option value="diesel">Diesel</option>
+                                    <option value="cng">CNG</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Quantity (Liters) *</label>
+                                <input type="number" class="form-control" name="quantity" min="1" max="50" 
+                                       placeholder="e.g., 5" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Vehicle Type</label>
+                        <select class="form-select" name="vehicleType">
+                            <option value="car">Car</option>
+                            <option value="bike">Bike</option>
+                            <option value="scooter">Scooter</option>
+                            <option value="truck">Truck</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Your Current Location *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="fuelCurrentLocation" 
+                                   placeholder="Click button to get location" readonly required>
+                            <button type="button" class="btn btn-outline-primary" onclick="getLocation('fuel')">
+                                📍 Get Current Location
+                            </button>
+                        </div>
+                        <div class="form-text">We need your location to find nearest fuel stations</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Your Address *</label>
+                        <textarea class="form-control" name="userAddress" rows="2" 
+                                  placeholder="Enter your complete address" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Contact Phone *</label>
+                        <input type="tel" class="form-control" name="userPhone" 
+                               value="<%= user.phone %>" required>
+                    </div>
+
+                    <!-- Hidden location fields -->
+                    <input type="hidden" id="fuelLatitude" name="latitude">
+                    <input type="hidden" id="fuelLongitude" name="longitude">
+                </form>
+
+                <!-- Results Section -->
+                <div id="fuelResults" class="mt-4" style="display: none;">
+                    <h6>Nearby Fuel Stations</h6>
+                    <div id="fuelStationsList" class="mb-3"></div>
+                    
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Cost Estimate</h6>
+                            <div id="fuelCostBreakdown"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-info" onclick="calculateFuelCost()" id="calculateBtn">
+                    Calculate Cost & Find Stations
+                </button>
+                <button type="button" class="btn btn-success" onclick="submitFuelRequest()" id="submitFuelBtn" style="display: none;">
+                    Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mechanic Request Modal -->
+<div class="modal fade" id="mechanicModal" tabindex="-1" aria-labelledby="mechanicModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mechanicModalLabel">🔧 Request Mechanical Assistance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mechanicForm">
+                    <div class="mb-3">
+                        <label class="form-label">Problem Description *</label>
+                        <textarea class="form-control" name="problemDescription" rows="3" 
+                                  placeholder="Describe your vehicle problem in detail..." required></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Vehicle Type *</label>
+                                <select class="form-select" name="vehicleType" required>
+                                    <option value="car">Car</option>
+                                    <option value="bike">Bike</option>
+                                    <option value="scooter">Scooter</option>
+                                    <option value="truck">Truck</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Your Current Location *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="mechanicCurrentLocation" 
+                                   placeholder="Click button to get location" readonly required>
+                            <button type="button" class="btn btn-outline-primary" onclick="getLocation('mechanic')">
+                                📍 Get Current Location
+                            </button>
+                        </div>
+                        <div class="form-text">We need your location to find nearest mechanics</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Your Address *</label>
+                        <textarea class="form-control" name="userAddress" rows="2" 
+                                  placeholder="Enter your complete address" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Contact Phone *</label>
+                        <input type="tel" class="form-control" name="userPhone" 
+                               value="<%= user.phone %>" required>
+                    </div>
+
+                    <!-- Hidden location fields -->
+                    <input type="hidden" id="mechanicLatitude" name="latitude">
+                    <input type="hidden" id="mechanicLongitude" name="longitude">
+                </form>
+
+                <!-- Results Section -->
+                <div id="mechanicResults" class="mt-4" style="display: none;">
+                    <h6>Nearby Mechanics</h6>
+                    <div id="mechanicsList" class="mb-3"></div>
+                    
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6>Cost Estimate</h6>
+                            <div id="mechanicCostBreakdown"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-info" onclick="calculateMechanicCost()" id="calculateMechBtn">
+                    Find Nearby Mechanics
+                </button>
+                <button type="button" class="btn btn-success" onclick="submitMechanicRequest()" id="submitMechBtn" style="display: none;">
+                    Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>

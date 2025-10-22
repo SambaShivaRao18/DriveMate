@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .registration-container {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .services-checkbox {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .already-registered {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .location-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #address {
+            height: 100px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/navbar') %>
+    
+    <div class="container registration-container">
+        <% if (user && !user.providerRegistered) { %>
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Complete Your Registration</h2>
+                </div>
+                <div class="card-body">
+                    <form action="/provider/complete-registration" method="POST" id="registrationForm">
+                        <div class="form-group">
+                            <label class="form-label">Business Name:</label>
+                            <input type="text" name="businessName" class="form-control" required 
+                                   placeholder="Enter your business name">
+                        </div>
+
+                        <!-- COORDINATES SECTION (from your original provider-register.ejs) -->
+                        <div class="form-group">
+                            <label class="form-label">Business Location *</label>
+                            <div class="alert alert-info">
+                                <h6>📍 How to get your exact coordinates:</h6>
+                                <ol class="mb-0">
+                                    <li>Open <strong>Google Maps</strong> on your phone/computer</li>
+                                    <li>Search for your business name or address</li>
+                                    <li>Long-press on your <strong>exact business location</strong></li>
+                                    <li>Copy the coordinates that appear (e.g., <code>17.4484, 78.3819</code>)</li>
+                                    <li>Paste them below</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude *</label>
+                                    <input type="number" step="0.000001" class="form-control" name="latitude" 
+                                           placeholder="e.g., 17.4484" required id="latitude">
+                                    <div class="form-text">From Google Maps (first number)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Longitude *</label>
+                                    <input type="number" step="0.000001" class="form-control" name="longitude" 
+                                           placeholder="e.g., 78.3819" required id="longitude">
+                                    <div class="form-text">From Google Maps (second number)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Business Address</label>
+                            <textarea class="form-control" name="address" id="address" rows="3" 
+                                      placeholder="Will be auto-filled from your coordinates (or enter manually)"></textarea>
+                            <div class="form-text">Leave empty to auto-fill from coordinates</div>
+                            <div class="location-buttons">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="getCurrentLocation()">
+                                    📍 Use My Current Location
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="reverseGeocode()">
+                                    🔄 Get Address from Coordinates
+                                </button>
+                            </div>
+                        </div>
+                        <!-- END COORDINATES SECTION -->
+                        
+                        <div class="form-group">
+                            <label class="form-label">Phone:</label>
+                            <input type="tel" name="phone" class="form-control" 
+                                   value="<%= user.phone || '' %>" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Services Offered:</label>
+                            <div class="services-checkbox">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" value="engine repair" id="engine-repair">
+                                    <label class="form-check-label" for="engine-repair">Engine Repair</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" value="tyre change" id="tyre-change">
+                                    <label class="form-check-label" for="tyre-change">Tyre Change</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" value="battery replacement" id="battery-replacement">
+                                    <label class="form-check-label" for="battery-replacement">Battery Replacement</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" value="brake repair" id="brake-repair">
+                                    <label class="form-check-label" for="brake-repair">Brake Repair</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" value="oil change" id="oil-change">
+                                    <label class="form-check-label" for="oil-change">Oil Change</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Assistance Fee (₹):</label>
+                                    <input type="number" name="assistanceFee" class="form-control" value="150" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Travel Fee (₹ per km):</label>
+                                    <input type="number" name="travelFee" class="form-control" value="10" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">Complete Registration</button>
+                    </form>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="card already-registered">
+                <div class="card-body">
+                    <h2>Already Registered</h2>
+                    <p>You have already completed your registration.</p>
+                    <a href="/provider/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+            </div>
+        <% } %>
+    </div>
+    
+    <%- include('../partials/footer') %>
+    <%- include('../partials/scripts') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Add the geolocation JavaScript -->
+    <script>
+        // Get current location using browser geolocation
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    document.getElementById('latitude').value = lat.toFixed(6);
+                    document.getElementById('longitude').value = lng.toFixed(6);
+                    
+                    // Auto-reverse geocode
+                    reverseGeocodeFromCoords(lat, lng);
+                },
+                function(error) {
+                    alert('Error getting location: ' + error.message);
+                }
+            );
+        }
+
+        // Reverse geocode from coordinates in form
+        function reverseGeocode() {
+            const lat = document.getElementById('latitude').value;
+            const lng = document.getElementById('longitude').value;
+            
+            if (!lat || !lng) {
+                alert('Please enter both latitude and longitude first');
+                return;
+            }
+            
+            reverseGeocodeFromCoords(parseFloat(lat), parseFloat(lng));
+        }
+
+        // Perform reverse geocoding
+        function reverseGeocodeFromCoords(lat, lng) {
+            const addressField = document.getElementById('address');
+            addressField.placeholder = 'Fetching address...';
+            
+            fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.address) {
+                        addressField.value = data.address;
+                    } else {
+                        alert('Could not find address for these coordinates');
+                    }
+                })
+                .catch(error => {
+                    console.error('Geocoding error:', error);
+                    alert('Error fetching address. Please enter manually.');
+                })
+                .finally(() => {
+                    addressField.placeholder = 'Will be auto-filled from your coordinates (or enter manually)';
+                });
+        }
+
+        // Auto-geocode when coordinates change
+        document.getElementById('latitude').addEventListener('change', reverseGeocode);
+        document.getElementById('longitude').addEventListener('change', reverseGeocode);
+    </script>
+</body>
+</html>

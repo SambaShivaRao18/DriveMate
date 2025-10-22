@@ -1,0 +1,192 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <% if (user.role === 'fuel-station') { %>
+                            ⛽ Register Your Fuel Station
+                        <% } else { %>
+                            🔧 Register Your Mechanic Shop
+                        <% } %>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <% if (error) { %>
+                        <div class="alert alert-danger">
+                            <%= error %>
+                        </div>
+                    <% } %>
+
+                    <form action="/provider/register" method="POST" id="providerRegisterForm">
+                        <div class="mb-3">
+                            <label class="form-label">Business Name *</label>
+                            <input type="text" class="form-control" name="businessName" required 
+                                   placeholder="e.g., Shell Fuel Station, City Auto Repair">
+                        </div>
+
+                        <!-- COORDINATES SECTION -->
+                        <div class="mb-3">
+                            <label class="form-label">Business Location *</label>
+                            <div class="alert alert-info">
+                                <h6>📍 How to get your exact coordinates:</h6>
+                                <ol class="mb-0">
+                                    <li>Open <strong>Google Maps</strong> on your phone/computer</li>
+                                    <li>Search for your business name or address</li>
+                                    <li>Long-press on your <strong>exact business location</strong></li>
+                                    <li>Copy the coordinates that appear (e.g., <code>17.4484, 78.3819</code>)</li>
+                                    <li>Paste them below</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Latitude *</label>
+                                    <input type="number" step="0.000001" class="form-control" name="latitude" 
+                                           placeholder="e.g., 17.4484" required>
+                                    <div class="form-text">From Google Maps (first number)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Longitude *</label>
+                                    <input type="number" step="0.000001" class="form-control" name="longitude" 
+                                           placeholder="e.g., 78.3819" required>
+                                    <div class="form-text">From Google Maps (second number)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Business Address</label>
+                            <textarea class="form-control" name="address" rows="2" 
+                                      placeholder="Will be auto-filled from your coordinates (or enter manually)"></textarea>
+                            <div class="form-text">Leave empty to auto-fill from coordinates</div>
+                        </div>
+                        <!-- END COORDINATES SECTION -->
+
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" name="phone" 
+                                   value="<%= user.phone %>" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email *</label>
+                            <input type="email" class="form-control" name="email" 
+                                   value="<%= user.email %>" required>
+                        </div>
+
+                        <% if (user.role === 'mechanic') { %>
+                        <div class="mb-3">
+                            <label class="form-label">Services Offered *</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="engine repair" checked>
+                                        <label class="form-check-label">Engine Repair</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="tyre change" checked>
+                                        <label class="form-check-label">Tyre Change</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="battery replacement" checked>
+                                        <label class="form-check-label">Battery Replacement</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="brake repair">
+                                        <label class="form-check-label">Brake Repair</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="ac service">
+                                        <label class="form-check-label">AC Service</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="electrical repair">
+                                        <label class="form-check-label">Electrical Repair</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="general service">
+                                        <label class="form-check-label">General Service</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="services" value="fuel delivery">
+                                        <label class="form-check-label">Fuel Delivery</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Assistance Fee (₹) *</label>
+                                    <input type="number" class="form-control" name="assistanceFee" 
+                                           value="<%= user.role === 'fuel-station' ? '100' : '150' %>" 
+                                           min="50" max="1000" required>
+                                    <div class="form-text">Base fee for providing assistance</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Travel Fee per Km (₹) *</label>
+                                    <input type="number" class="form-control" name="travelFeePerKm" 
+                                           value="10" min="5" max="50" required>
+                                    <div class="form-text">Charged per km traveled to reach customer</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <% if (user.role === 'fuel-station') { %>
+                        <div class="mb-3">
+                            <h6>Fuel Prices (₹)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Petrol per Liter</label>
+                                    <input type="number" step="0.1" class="form-control" name="petrolPrice" value="96.7" min="50" max="200">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Diesel per Liter</label>
+                                    <input type="number" step="0.1" class="form-control" name="dieselPrice" value="89.6" min="50" max="200">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">CNG per Kg</label>
+                                    <input type="number" step="0.1" class="form-control" name="cngPrice" value="75.3" min="40" max="150">
+                                </div>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" required id="termsCheck">
+                                <label class="form-check-label" for="termsCheck">
+                                    I confirm that the business information provided is accurate and I am authorized to represent this business
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <% if (user.role === 'fuel-station') { %>
+                                ⛽ Register Fuel Station
+                            <% } else { %>
+                                🔧 Register Mechanic Shop
+                            <% } %>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

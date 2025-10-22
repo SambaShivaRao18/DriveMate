@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('../partials/header') %>
+    <%- include('../partials/navbar') %>
+    
+    <div class="container">
+        <h2>Edit Business Details</h2>
+        <form action="/update-profile" method="POST" class="edit-form">
+            <div class="form-group">
+                <label>Business Name:</label>
+                <input type="text" name="businessName" value="<%= mechanic.businessName %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Address:</label>
+                <textarea name="address" required><%= mechanic.address %></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Phone:</label>
+                <input type="tel" name="phone" value="<%= mechanic.phone %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Services Offered:</label>
+                <div class="services-checkbox">
+                    <% const services = mechanic.services || []; %>
+                    <label><input type="checkbox" name="services" value="engine repair" <%= services.includes('engine repair') ? 'checked' : '' %>> Engine Repair</label>
+                    <label><input type="checkbox" name="services" value="tyre change" <%= services.includes('tyre change') ? 'checked' : '' %>> Tyre Change</label>
+                    <label><input type="checkbox" name="services" value="battery replacement" <%= services.includes('battery replacement') ? 'checked' : '' %>> Battery Replacement</label>
+                    <label><input type="checkbox" name="services" value="brake repair" <%= services.includes('brake repair') ? 'checked' : '' %>> Brake Repair</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Assistance Fee (₹):</label>
+                <input type="number" name="assistanceFee" value="<%= mechanic.assistanceFee %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Travel Fee (₹ per km):</label>
+                <input type="number" name="travelFee" value="<%= mechanic.travelFee %>" required>
+            </div>
+            
+            <button type="submit" class="btn-primary">Update Details</button>
+            <a href="/dashboard" class="btn-secondary">Cancel</a>
+        </form>
+    </div>
+    
+    <%- include('../partials/footer') %>
+    <%- include('../partials/scripts') %>
+</body>
+</html>

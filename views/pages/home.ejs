@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<main class="container mt-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4 mb-4">🚗 Roadside Assistance</h1>
+            <p class="lead mb-4">Get immediate help for fuel emergencies and vehicle breakdowns</p>
+            
+            <div class="row mt-5">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">⛽ Fuel Assistance</h5>
+                            <p class="card-text">Run out of fuel? Get immediate fuel delivery to your location.</p>
+                            <% if (user) { %>
+                                <a href="/dashboard?service=fuel" class="btn btn-primary">Request Fuel</a>
+                            <% } else { %>
+                                <a href="/register" class="btn btn-outline-primary">Sign Up to Request</a>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🔧 Mechanical Help</h5>
+                            <p class="card-text">Vehicle breakdown? Find nearest mechanics and repair shops.</p>
+                            <% if (user) { %>
+                                <a href="/dashboard?service=mechanic" class="btn btn-primary">Request Mechanic</a>
+                            <% } else { %>
+                                <a href="/register" class="btn btn-outline-primary">Sign Up to Request</a>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<%- include('../partials/footer') %>
