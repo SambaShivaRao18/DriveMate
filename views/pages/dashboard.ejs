@@ -22,25 +22,52 @@
     <% if (user.role === 'traveller') { %>
         <!-- Traveller Dashboard -->
         <div class="row mt-4">
-            <div class="col-md-6 mb-4">
-                <div class="card service-card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">⛽ Fuel Assistance</h5>
-                        <p class="card-text">Get fuel delivered to your location</p>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fuelModal">
+            <div class="col-12 col-sm-6 mb-3">
+                <div class="card service-card h-100 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="service-icon mb-3" style="font-size: 3rem;">⛽</div>
+                        <h5 class="card-title fw-bold">Fuel Assistance</h5>
+                        <p class="card-text text-muted">Get fuel delivered to your location within minutes</p>
+                        <button class="btn btn-primary btn-lg w-100 btn-mobile" data-bs-toggle="modal" data-bs-target="#fuelModal">
                             Request Fuel
                         </button>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 mb-4">
-                <div class="card service-card h-100">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">🔧 Mechanical Help</h5>
-                        <p class="card-text">Find nearby mechanics</p>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mechanicModal">
+            <div class="col-12 col-sm-6 mb-3">
+                <div class="card service-card h-100 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="service-icon mb-3" style="font-size: 3rem;">🔧</div>
+                        <h5 class="card-title fw-bold">Mechanical Help</h5>
+                        <p class="card-text text-muted">Expert mechanics for all vehicle types and issues</p>
+                        <button class="btn btn-primary btn-lg w-100 btn-mobile" data-bs-toggle="modal" data-bs-target="#mechanicModal">
                             Request Mechanic
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency SOS Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-danger">🚨 Emergency Assistance</h5>
+                        <p class="card-text">Immediate help for urgent situations</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <button class="btn btn-outline-danger btn-lg w-100 btn-mobile" onclick="requestEmergencyHelp('fuel')">
+                                    ⛽ Emergency Fuel
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-danger btn-lg w-100 btn-mobile" onclick="requestEmergencyHelp('mechanic')">
+                                    🔧 Emergency Repair
+                                </button>
+                            </div>
+                        </div>
+                        <p class="small text-muted mt-2">Priority service for urgent situations</p>
                     </div>
                 </div>
             </div>
@@ -62,6 +89,22 @@
             </div>
         </div>
 
+        <!-- Payment & Rating Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">💰 Payment History</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="paymentHistory">
+                            <p class="text-muted">Loading payment history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <% } else if (user.role === 'fuel-station' || user.role === 'mechanic') { %>
         <!-- Provider Dashboard Redirect Notice -->
         <div class="row mt-4">
@@ -70,7 +113,7 @@
                     <div class="card-body text-center">
                         <h5>Provider Account Detected</h5>
                         <p>You are registered as a <%= user.role === 'fuel-station' ? 'Fuel Station' : 'Mechanic' %>.</p>
-                        <a href="/provider/dashboard" class="btn btn-primary">
+                        <a href="/provider/dashboard" class="btn btn-primary btn-mobile">
                             Go to Provider Dashboard
                         </a>
                     </div>
@@ -138,7 +181,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" id="fuelCurrentLocation" 
                                    placeholder="Click button to get location" readonly required>
-                            <button type="button" class="btn btn-outline-primary" onclick="getLocation('fuel')">
+                            <button type="button" class="btn btn-outline-primary btn-mobile" onclick="getLocation('fuel')">
                                 📍 Get Current Location
                             </button>
                         </div>
@@ -176,11 +219,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-outline-info" onclick="calculateFuelCost()" id="calculateBtn">
+                <button type="button" class="btn btn-secondary btn-mobile" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-info btn-mobile" onclick="calculateFuelCost()" id="calculateBtn">
                     Calculate Cost & Find Stations
                 </button>
-                <button type="button" class="btn btn-success" onclick="submitFuelRequest()" id="submitFuelBtn" style="display: none;">
+                <button type="button" class="btn btn-success btn-mobile" onclick="submitFuelRequest()" id="submitFuelBtn" style="display: none;">
                     Submit Request
                 </button>
             </div>
@@ -224,7 +267,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" id="mechanicCurrentLocation" 
                                    placeholder="Click button to get location" readonly required>
-                            <button type="button" class="btn btn-outline-primary" onclick="getLocation('mechanic')">
+                            <button type="button" class="btn btn-outline-primary btn-mobile" onclick="getLocation('mechanic')">
                                 📍 Get Current Location
                             </button>
                         </div>
@@ -262,12 +305,104 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-outline-info" onclick="calculateMechanicCost()" id="calculateMechBtn">
+                <button type="button" class="btn btn-secondary btn-mobile" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-info btn-mobile" onclick="calculateMechanicCost()" id="calculateMechBtn">
                     Find Nearby Mechanics
                 </button>
-                <button type="button" class="btn btn-success" onclick="submitMechanicRequest()" id="submitMechBtn" style="display: none;">
+                <button type="button" class="btn btn-success btn-mobile" onclick="submitMechanicRequest()" id="submitMechBtn" style="display: none;">
                     Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Complete Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    <input type="hidden" id="paymentRequestId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Service Request</label>
+                        <p class="form-control-plaintext" id="paymentServiceDetails"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Amount to Pay</label>
+                        <p class="form-control-plaintext fw-bold fs-5" id="paymentAmount"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method *</label>
+                        <select class="form-select" id="paymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="cash">💵 Cash</option>
+                            <option value="upi">📱 UPI</option>
+                            <option value="card">💳 Card</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="transactionIdField" style="display: none;">
+                        <label class="form-label">Transaction ID *</label>
+                        <input type="text" class="form-control" id="transactionId" 
+                               placeholder="Enter transaction reference number">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-mobile" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-mobile" onclick="processPayment()">
+                    💰 Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rating Modal -->
+<div class="modal fade" id="ratingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rate Your Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="ratingForm">
+                    <input type="hidden" id="ratingRequestId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">How was your service experience?</label>
+                        <div class="text-center mb-3">
+                            <div class="rating-stars">
+                                <span class="star" data-rating="1">☆</span>
+                                <span class="star" data-rating="2">☆</span>
+                                <span class="star" data-rating="3">☆</span>
+                                <span class="star" data-rating="4">☆</span>
+                                <span class="star" data-rating="5">☆</span>
+                            </div>
+                            <input type="hidden" id="selectedRating" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Your Review (Optional)</label>
+                        <textarea class="form-control" id="reviewText" rows="3" 
+                                  placeholder="Share your experience..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-mobile" data-bs-dismiss="modal">Skip</button>
+                <button type="button" class="btn btn-primary btn-mobile" onclick="submitRating()">
+                    ⭐ Submit Rating
                 </button>
             </div>
         </div>

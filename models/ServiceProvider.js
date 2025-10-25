@@ -1,91 +1,94 @@
- 
-
 const mongoose = require("mongoose");
 
-const serviceProviderSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  businessName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  businessType: {
-    type: String,
-    enum: ['fuel-station', 'mechanic'],
-    required: true
-  },
-  services: [{
-    type: String
-  }],
-  address: {
-    type: String,
-    required: true
-  },
-  location: {
-    type: {
+// OVERWRITE PROTECTION: Check if model already exists
+if (mongoose.models.ServiceProvider) {
+  module.exports = mongoose.models.ServiceProvider;
+} else {
+  const serviceProviderSchema = new mongoose.Schema({
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    businessName: {
       type: String,
-      enum: ['Point'],
-      default: 'Point'
+      required: true,
+      trim: true
     },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      index: '2dsphere'
-    }
-  },
-  phone: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  isAvailable: {
-    type: Boolean,
-    default: true
-  },
-  pricing: {
-    assistanceFee: {
+    businessType: {
+      type: String,
+      enum: ['fuel-station', 'mechanic'],
+      required: true
+    },
+    services: [{
+      type: String
+    }],
+    address: {
+      type: String,
+      required: true
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: '2dsphere'
+      }
+    },
+    phone: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true
+    },
+    pricing: {
+      assistanceFee: {
+        type: Number,
+        default: 100
+      },
+      travelFeePerKm: {
+        type: Number,
+        default: 10
+      },
+      fuelPrices: {
+        petrol: { type: Number, default: 0 },
+        diesel: { type: Number, default: 0 },
+        cng: { type: Number, default: 0 }
+      }
+    },
+    rating: {
       type: Number,
-      default: 100
+      default: 0
     },
-    travelFeePerKm: {
+    totalRatings: {
       type: Number,
-      default: 10
+      default: 0
     },
-    fuelPrices: {
-      petrol: { type: Number, default: 0 },
-      diesel: { type: Number, default: 0 },
-      cng: { type: Number, default: 0 }
+    operatingHours: {
+      open: String,
+      close: String
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
     }
-  },
-  rating: {
-    type: Number,
-    default: 0
-  },
-  totalRatings: {
-    type: Number,
-    default: 0
-  },
-  operatingHours: {
-    open: String,
-    close: String
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  });
 
-// Create geospatial index
-serviceProviderSchema.index({ location: '2dsphere' });
+  // Create geospatial index
+  serviceProviderSchema.index({ location: '2dsphere' });
 
-module.exports = mongoose.model('ServiceProvider', serviceProviderSchema);
+  module.exports = mongoose.model('ServiceProvider', serviceProviderSchema);
+}

@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const providerRoutes = require("./routes/providerRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 dotenv.config();
 
@@ -34,6 +35,11 @@ app.get("/", (req, res) => {
   res.render('pages/home', { user: null });
 });
 
+// Track request page
+app.get("/track", (req, res) => {
+  res.render('pages/track-request', { user: null });
+});
+
 // Login page redirect
 app.get("/login", (req, res) => {
   res.redirect('/auth/login');
@@ -55,6 +61,7 @@ app.get("/dashboard", (req, res) => {
 
 app.use("/auth", authRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/provider", providerRoutes);
 
 // ======================

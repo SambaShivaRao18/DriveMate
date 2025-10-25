@@ -1,124 +1,574 @@
 <%- include('../partials/header') %>
 <%- include('../partials/navbar') %>
 
-<div class="container mt-4">
+<main class="container mt-4">
+    <!-- Add data attributes here to pass EJS variables to JavaScript -->
+    <div id="providerData"
+         data-is-available="<%= provider.isAvailable %>"
+         data-business-type="<%= provider.businessType %>"
+         style="display: none;">
+    </div>
+    
     <div class="row">
         <div class="col-12">
-            <h2>
-                <% if (user.role === 'fuel-station') { %>
-                    ⛽ Fuel Station Dashboard
-                <% } else { %>
-                    🔧 Mechanic Dashboard
-                <% } %>
-            </h2>
-            <p class="text-muted">Welcome, <%= provider.businessName %>!</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>Provider Dashboard</h2>
+                    <p class="text-muted">Welcome, <%= provider.businessName %>!</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="refreshDashboard()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn" id="availabilityBtn" onclick="toggleAvailability()">
+                        <!-- Button content will be set by JavaScript -->
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Business Info Card -->
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Quick Stats -->
     <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Business Information</h5>
-                </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
                 <div class="card-body">
-                    <p><strong>Business Name:</strong> <%= provider.businessName %></p>
-                    <p><strong>Address:</strong> <%= provider.address %></p>
-                    <p><strong>Phone:</strong> <%= provider.phone %></p>
-                    <p><strong>Email:</strong> <%= provider.email %></p>
-                    <p><strong>Status:</strong> 
-                        <span class="badge bg-success">Verified</span>
-                        <span class="badge bg-primary">Available</span>
-                    </p>
+                    <h5 class="card-title" id="pendingRequests"><%= nearbyRequests.length %></h5>
+                    <p class="card-text">Pending Requests</p>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Pricing</h5>
-                </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
                 <div class="card-body">
-                    <p><strong>Assistance Fee:</strong> ₹<%= provider.pricing.assistanceFee %></p>
-                    <p><strong>Travel Fee:</strong> ₹<%= provider.pricing.travelFeePerKm %> per km</p>
-                    
-                    <% if (user.role === 'fuel-station') { %>
-                        <hr>
-                        <h6>Fuel Prices:</h6>
-                        <% if (provider.pricing.fuelPrices.petrol > 0) { %>
-                            <p class="mb-1">Petrol: ₹<%= provider.pricing.fuelPrices.petrol %>/L</p>
-                        <% } %>
-                        <% if (provider.pricing.fuelPrices.diesel > 0) { %>
-                            <p class="mb-1">Diesel: ₹<%= provider.pricing.fuelPrices.diesel %>/L</p>
-                        <% } %>
-                        <% if (provider.pricing.fuelPrices.cng > 0) { %>
-                            <p class="mb-1">CNG: ₹<%= provider.pricing.fuelPrices.cng %>/kg</p>
-                        <% } %>
-                    <% } else { %>
-                        <hr>
-                        <h6>Services:</h6>
-                        <p class="mb-0"><%= provider.services.join(', ') %></p>
-                    <% } %>
+                    <h5 class="card-title" id="activeRequests">0</h5>
+                    <p class="card-text">Active Jobs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title" id="completedRequests">0</h5>
+                    <p class="card-text">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <%= provider.rating || '0.0' %>
+                    </h5>
+                    <p class="card-text">⭐ Rating</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Nearby Requests -->
+    <!-- Earnings Section -->
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Nearby Service Requests</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">💰 Earnings Overview</h5>
+                    <button class="btn btn-outline-success btn-sm" onclick="loadEarnings()">
+                        📊 Refresh Earnings
+                    </button>
                 </div>
                 <div class="card-body">
-                    <% if (nearbyRequests && nearbyRequests.length > 0) { %>
-                        <div class="list-group">
-                            <% nearbyRequests.forEach(request => { %>
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">
-                                            <%= request.serviceType === 'fuel' ? '⛽' : '🔧' %>
-                                            <%= request.serviceType.charAt(0).toUpperCase() + request.serviceType.slice(1) %> Assistance
-                                        </h6>
-                                        <small class="text-muted">
-                                            <%= new Date(request.createdAt).toLocaleString() %>
-                                        </small>
-                                    </div>
-                                    <p class="mb-1">
-                                        <strong>Customer:</strong> <%= request.user.name %> (<%= request.user.phone %>)
-                                    </p>
-                                    <% if (request.serviceType === 'fuel') { %>
-                                        <p class="mb-1">
-                                            <strong>Fuel:</strong> <%= request.quantity %>L <%= request.fuelType %>
-                                        </p>
-                                    <% } else { %>
-                                        <p class="mb-1">
-                                            <strong>Problem:</strong> <%= request.problemDescription %>
-                                        </p>
-                                    <% } %>
-                                    <p class="mb-1">
-                                        <strong>Estimated Cost:</strong> ₹<%= request.costEstimate.totalCost %>
-                                    </p>
-                                    <div class="mt-2">
-                                        <button class="btn btn-success btn-sm">Accept Request</button>
-                                        <button class="btn btn-outline-secondary btn-sm">View Details</button>
-                                    </div>
-                                </div>
-                            <% }) %>
+                    <div id="earningsSection">
+                        <div class="text-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Loading earnings data...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Requests Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">🔄 Active Service Requests</h5>
+                    <span class="badge bg-primary" id="activeCount">0</span>
+                </div>
+                <div class="card-body">
+                    <div id="activeRequestsList">
+                        <p class="text-muted">No active requests</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nearby Requests Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">📋 Nearby Service Requests</h5>
+                    <span class="badge bg-success" id="nearbyCount">
+                        <%= nearbyRequests.length %>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <% if (nearbyRequests.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Service</th>
+                                        <th>Customer</th>
+                                        <th>Distance</th>
+                                        <th>Estimated Pay</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% nearbyRequests.forEach(request => { %>
+                                        <tr id="request-<%= request.requestId %>">
+                                            <td>
+                                                <strong>
+                                                    <%= request.requestId %>
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <%= new Date(request.createdAt).toLocaleTimeString() %>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <% if (request.serviceType === 'fuel') { %>
+                                                    ⛽ <%= request.fuelType %> - <%= request.quantity %>L
+                                                <% } else { %>
+                                                    🔧 <%= request.vehicleType %>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <%= request.problemDescription?.substring(0, 30) %>...
+                                                    </small>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <%= request.user.name %>
+                                                <br>
+                                                <small class="text-muted">
+                                                    📞 <%= request.user.phone %>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <!-- Distance will be calculated dynamically -->
+                                                <span class="badge bg-secondary">Calculating...</span>
+                                            </td>
+                                            <td>
+                                                <strong>₹<%= request.costEstimate.totalCost %></strong>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-success btn-sm"
+                                                    onclick="acceptRequest('<%= request.requestId %>')">
+                                                    ✅ Accept
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm mt-1"
+                                                    onclick="viewRequestDetails('<%= request.requestId %>')">
+                                                    👁️ Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
                         </div>
                     <% } else { %>
                         <div class="text-center py-4">
                             <p class="text-muted">No nearby service requests at the moment.</p>
-                            <p class="small text-muted">Requests from travelers near your location will appear here.</p>
+                            <p class="small text-muted">New requests will appear here automatically.</p>
                         </div>
                     <% } %>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<%- include('../partials/footer') %>
+    <!-- Request Details Modal -->
+    <div class="modal fade" id="requestDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Request Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestDetailsContent">
+                    <!-- Content loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<%- include('../partials/scripts') %>
+
+<script>
+    // Global variables - Read from data attributes
+    let providerData = {
+        isAvailable: document.getElementById('providerData').getAttribute('data-is-available') === 'true',
+        businessType: document.getElementById('providerData').getAttribute('data-business-type')
+    };
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('🚗 Provider Dashboard Initialized');
+        console.log('Provider availability:', providerData.isAvailable);
+        console.log('Business type:', providerData.businessType);
+        updateAvailabilityButton();
+        loadActiveRequests();
+        loadEarnings();
+        startDashboardAutoRefresh();
+    });
+
+    // Update availability button state
+    function updateAvailabilityButton() {
+        const btn = document.getElementById('availabilityBtn');
+        if (providerData.isAvailable) {
+            btn.className = 'btn btn-success';
+            btn.innerHTML = '✅ Available for Requests';
+        } else {
+            btn.className = 'btn btn-outline-secondary';
+            btn.innerHTML = '⏸️ Not Available';
+        }
+    }
+
+    // Toggle availability
+    async function toggleAvailability() {
+        try {
+            const response = await fetch('/provider/availability', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                providerData.isAvailable = data.isAvailable;
+                updateAvailabilityButton();
+                showAlert(data.message, 'success');
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Toggle availability error:', error);
+            showAlert('Error updating availability: ' + error.message, 'danger');
+        }
+    }
+
+    // Accept service request - UPDATED VERSION WITH MODAL CLOSE
+    async function acceptRequest(requestId, closeModal = false) {
+        if (!providerData.isAvailable) {
+            showAlert('Please set your status to Available before accepting requests', 'warning');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to accept this request?')) {
+            return;
+        }
+
+        try {
+            console.log('✅ Accepting request:', requestId);
+            
+            const response = await fetch(`/api/services/request/${requestId}/assign`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                showAlert('✅ Request accepted successfully!', 'success');
+                
+                // Remove from nearby requests
+                const requestRow = document.getElementById(`request-${requestId}`);
+                if (requestRow) {
+                    requestRow.remove();
+                }
+                
+                // Update counts
+                updateRequestCounts();
+                
+                // Close modal if called from modal
+                if (closeModal) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('requestDetailsModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                }
+                
+                // Refresh active requests after a short delay
+                setTimeout(() => {
+                    loadActiveRequests();
+                }, 1000);
+                
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Accept request error:', error);
+            showAlert('Error accepting request: ' + error.message, 'danger');
+        }
+    }
+
+    // View request details - UPDATED VERSION
+    function viewRequestDetails(requestId) {
+        console.log('🔍 Opening details for request:', requestId);
+        
+        // Find the request in the nearby requests
+        const requestRow = document.getElementById(`request-${requestId}`);
+        if (!requestRow) {
+            showAlert('Request not found', 'danger');
+            return;
+        }
+
+        // Get basic info from the table
+        const serviceType = requestRow.cells[1].innerText.includes('⛽') ? 'fuel' : 'mechanic';
+        const customerInfo = requestRow.cells[2].innerText;
+        const amount = requestRow.cells[4].innerText.replace('₹', '');
+
+        // Create simple modal content
+        const modalContent = `
+            <div class="request-details">
+                <h6>📋 Request Information</h6>
+                <div class="mb-3">
+                    <p><strong>ID:</strong> ${requestId}</p>
+                    <p><strong>Service Type:</strong> ${serviceType}</p>
+                    <p><strong>Customer:</strong> ${customerInfo.split('\n')[0]}</p>
+                    <p><strong>Phone:</strong> ${customerInfo.split('\n')[1]?.replace('📞 ', '') || 'Not available'}</p>
+                    <p><strong>Estimated Pay:</strong> ₹${amount}</p>
+                </div>
+                <div class="text-center">
+                    <button class="btn btn-success btn-lg" onclick="acceptRequest('${requestId}', true)">
+                        ✅ Accept This Request
+                    </button>
+                    <button class="btn btn-secondary btn-lg ms-2" data-bs-dismiss="modal">
+                        ❌ Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Set modal content
+        document.getElementById('requestDetailsContent').innerHTML = modalContent;
+        
+        // Show modal
+        const modalElement = document.getElementById('requestDetailsModal');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        console.log('✅ Modal opened successfully');
+    }
+
+    // Load active requests - FIXED VERSION
+    async function loadActiveRequests() {
+        try {
+            const response = await fetch('/provider/active-requests');
+            const data = await response.json();
+            const container = document.getElementById('activeRequestsList');
+            const countBadge = document.getElementById('activeCount');
+
+            if (data.success && data.activeRequests && data.activeRequests.length > 0) {
+                let html = '';
+                data.activeRequests.forEach(request => {
+                    const statusBadge = getStatusBadge(request.status);
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title">
+                                            ${request.serviceType === 'fuel' ? '⛽' : '🔧'}
+                                            ${request.requestId}
+                                            <span class="badge ${statusBadge.class}">${statusBadge.text}</span>
+                                        </h6>
+                                        <p class="card-text mb-1">
+                                            <strong>Customer:</strong> ${request.user.name} (${request.user.phone})<br>
+                                            ${request.serviceType === 'fuel' ?
+                                                `<strong>Fuel:</strong> ${request.quantity}L ${request.fuelType}` :
+                                                `<strong>Problem:</strong> ${request.problemDescription}`
+                                            }
+                                        </p>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="btn-group-vertical">
+                                            ${request.status === 'accepted' ? `
+                                                <button class="btn btn-outline-primary btn-sm"
+                                                    onclick="updateRequestStatus('${request.requestId}', 'en_route')">
+                                                    🚗 En Route
+                                                </button>
+                                            ` : ''}
+                                            ${request.status === 'en_route' ? `
+                                                <button class="btn btn-outline-secondary btn-sm"
+                                                    onclick="updateRequestStatus('${request.requestId}', 'service_started')">
+                                                    🔧 Start Service
+                                                </button>
+                                            ` : ''}
+                                            ${request.status === 'service_started' ? `
+                                                <button class="btn btn-outline-success btn-sm"
+                                                    onclick="updateRequestStatus('${request.requestId}', 'completed')">
+                                                    ✅ Complete
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+                countBadge.textContent = data.activeRequests.length;
+                document.getElementById('activeRequests').textContent = data.activeRequests.length;
+            } else {
+                container.innerHTML = '<p class="text-muted">No active requests</p>';
+                countBadge.textContent = '0';
+                document.getElementById('activeRequests').textContent = '0';
+            }
+        } catch (error) {
+            console.error('Load active requests error:', error);
+            document.getElementById('activeRequestsList').innerHTML =
+                '<p class="text-danger">Error loading active requests</p>';
+        }
+    }
+
+    // Update request status
+    async function updateRequestStatus(requestId, status) {
+        try {
+            const response = await fetch(`/api/services/request/${requestId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+            const data = await response.json();
+            if (data.success) {
+                showAlert(`✅ Status updated to: ${status.replace('_', ' ')}`, 'success');
+                loadActiveRequests();
+                updateRequestCounts();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Update status error:', error);
+            showAlert('Error updating status: ' + error.message, 'danger');
+        }
+    }
+
+    // Refresh dashboard data
+    async function refreshDashboard() {
+        window.location.reload();
+    }
+
+    // Auto-refresh dashboard every 15 seconds
+    function startDashboardAutoRefresh() {
+        console.log('🔄 Starting auto-refresh (15s intervals)');
+        // Set up interval
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing dashboard data...');
+            loadActiveRequests();
+            updateRequestCounts();
+        }, 15000);
+    }
+
+    // Update request counts
+    function updateRequestCounts() {
+        const nearbyCount = document.querySelectorAll('tbody tr').length;
+        document.getElementById('nearbyCount').textContent = nearbyCount;
+        document.getElementById('pendingRequests').textContent = nearbyCount;
+    }
+
+    // Utility functions
+    function getStatusBadge(status) {
+        const statusMap = {
+            'pending': { class: 'bg-warning', text: 'Pending' },
+            'accepted': { class: 'bg-info', text: 'Accepted' },
+            'en_route': { class: 'bg-primary', text: 'En Route' },
+            'service_started': { class: 'bg-secondary', text: 'Service Started' },
+            'completed': { class: 'bg-success', text: 'Completed' }
+        };
+        return statusMap[status] || { class: 'bg-secondary', text: status };
+    }
+
+    function showAlert(message, type) {
+        const alertContainer = document.getElementById('alertContainer');
+        const alertId = 'alert-' + Date.now();
+        const alertHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        alertContainer.innerHTML = alertHTML;
+        setTimeout(() => {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Load provider earnings
+    async function loadEarnings() {
+        try {
+            const earningsSection = document.getElementById('earningsSection');
+            earningsSection.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Loading earnings data...</span>
+                </div>
+            `;
+
+            const response = await fetch('/api/payments/earnings');
+            const data = await response.json();
+            if (data.success) {
+                const earnings = data.earnings;
+                let earningsHTML = `
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h4 class="card-title">₹${earnings.total || 0}</h4>
+                                    <p class="card-text">Total Earnings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h4 class="card-title">${earnings.paymentCount || 0}</h4>
+                                    <p class="card-text">Completed Services</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                earningsSection.innerHTML = earningsHTML;
+                document.getElementById('completedRequests').textContent = earnings.paymentCount || '0';
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            console.error('Load earnings error:', error);
+            document.getElementById('earningsSection').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>❌ Error loading earnings</h6>
+                    <p class="mb-0 small">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+</script>

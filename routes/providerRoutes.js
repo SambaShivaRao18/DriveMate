@@ -1,24 +1,26 @@
-
 const express = require("express");
 const router = express.Router();
 const {
     showProviderRegister,
     registerProvider,
-    showProviderDashboard
+    showProviderDashboard,
+    getProviderProfile,
+    toggleAvailability,
+    getProviderActiveRequests,
+    updateProviderLocation
 } = require("../controllers/providerController");
 
 const { protect } = require("../middleware/authMiddleware");
 
-// @route   GET /provider/register
-// @desc    Show provider registration page
+// PAGE ROUTES
 router.get("/register", protect, showProviderRegister);
-
-// @route   POST /provider/register  
-// @desc    Register service provider
-router.post("/register", protect, registerProvider);
-
-// @route   GET /provider/dashboard
-// @desc    Show provider dashboard
 router.get("/dashboard", protect, showProviderDashboard);
+
+// API ROUTES
+router.post("/register", protect, registerProvider);
+router.get("/profile", protect, getProviderProfile);
+router.put("/availability", protect, toggleAvailability);
+router.get("/active-requests", protect, getProviderActiveRequests);
+router.put("/location", protect, updateProviderLocation);
 
 module.exports = router;

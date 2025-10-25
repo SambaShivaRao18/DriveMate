@@ -1,29 +1,25 @@
- 
 const ServiceProvider = require("../models/ServiceProvider");
 const ServiceRequest = require("../models/ServiceRequest");
+const smsService = require("../utils/smsService");
+const fetch = require('node-fetch');
 
 // Reverse geocode coordinates to address
 async function reverseGeocode(latitude, longitude) {
     try {
         console.log(`📍 Reverse geocoding: ${latitude}, ${longitude}`);
-        
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
         );
-        
         if (!response.ok) {
             throw new Error('Reverse geocoding service unavailable');
         }
-        
         const data = await response.json();
-        
         if (data && data.display_name) {
             console.log('✅ Reverse geocoding successful:', data.display_name);
             return data.display_name;
         } else {
             throw new Error('Could not determine address from coordinates');
         }
-        
     } catch (error) {
         console.error('❌ Reverse geocoding error:', error);
         // Fallback: return coordinates-based address
@@ -36,17 +32,14 @@ exports.showProviderRegister = async (req, res) => {
     try {
         // Check if provider already registered
         const existingProvider = await ServiceProvider.findOne({ user: req.user._id });
-        
         if (existingProvider) {
             // If already registered, redirect to dashboard
             return res.redirect('/provider/dashboard');
         }
-
-        res.render('pages/provider-register', { 
+        res.render('pages/provider-register', {
             user: req.user,
-            error: null 
+            error: null
         });
-
     } catch (error) {
         console.error('Provider register page error:', error);
         res.status(500).render('error', { error: 'Failed to load registration page' });
@@ -70,9 +63,7 @@ exports.registerProvider = async (req, res) => {
             latitude,
             longitude
         } = req.body;
-
         const user = req.user;
-
         // Check if provider already registered
         const existingProvider = await ServiceProvider.findOne({ user: user._id });
         if (existingProvider) {
@@ -89,7 +80,6 @@ exports.registerProvider = async (req, res) => {
                 error: "Latitude and longitude are required"
             });
         }
-
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
         
@@ -139,10 +129,8 @@ exports.registerProvider = async (req, res) => {
 
         const provider = new ServiceProvider(providerData);
         await provider.save();
-
         console.log(`✅ Provider registered: ${businessName} at ${businessAddress}`);
         res.redirect('/provider/dashboard');
-
     } catch (error) {
         console.error('Provider registration error:', error);
         res.status(500).render('pages/provider-register', {
@@ -177,7 +165,6 @@ exports.showProviderDashboard = async (req, res) => {
             provider: provider,
             nearbyRequests: nearbyRequests
         });
-
     } catch (error) {
         console.error('Provider dashboard error:', error);
         res.status(500).render('error', { error: 'Failed to load dashboard' });
@@ -188,19 +175,16 @@ exports.showProviderDashboard = async (req, res) => {
 exports.getProviderProfile = async (req, res) => {
     try {
         const provider = await ServiceProvider.findOne({ user: req.user._id });
-
         if (!provider) {
             return res.status(404).json({
                 success: false,
                 error: "Provider profile not found"
             });
         }
-
         res.json({
             success: true,
             provider
         });
-
     } catch (error) {
         console.error("Get provider profile error:", error);
         res.status(500).json({
@@ -208,4 +192,172 @@ exports.getProviderProfile = async (req, res) => {
             error: "Failed to get provider profile"
         });
     }
+};
+
+// @desc   Toggle provider availability
+exports.toggleAvailability = async (req, res) => {
+  try {
+    const provider = await ServiceProvider.findOne({ user: req.user._id });
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider profile not found"
+      });
+    }
+    provider.isAvailable = !provider.isAvailable;
+    await provider.save();
+    res.json({
+      success: true,
+      message: `You are now ${provider.isAvailable ? 'available' : 'unavailable'} for requests`,
+      isAvailable: provider.isAvailable
+    });
+  } catch (error) {
+    console.error('Toggle availability error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update availability"
+    });
+  }
+};
+
+// @desc   Get provider's active requests
+exports.getProviderActiveRequests = async (req, res) => {
+  try {
+    const provider = await ServiceProvider.findOne({ user: req.user._id });
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider profile not found"
+      });
+    }
+
+    const activeRequests = await ServiceRequest.find({
+      assignedProvider: provider._id,
+      status: { $in: ['accepted', 'en_route', 'service_started'] }
+    })
+    .populate('user', 'name phone')
+    .sort({ acceptedAt: -1 });
+
+    console.log(`✅ Found ${activeRequests.length} active requests for provider ${provider.businessName}`);
+
+    res.json({
+      success: true,
+      activeRequests
+    });
+  } catch (error) {
+    console.error('Get active requests error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get active requests"
+    });
+  }
+};
+
+// @desc   Update provider location (for real-time tracking)
+exports.updateProviderLocation = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const provider = await ServiceProvider.findOne({ user: req.user._id });
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider profile not found"
+      });
+    }
+    // Update provider location
+    provider.location.coordinates = [parseFloat(longitude), parseFloat(latitude)];
+    await provider.save();
+    console.log(`📍 Provider ${provider.businessName} location updated: ${latitude}, ${longitude}`);
+    res.json({
+      success: true,
+      message: "Location updated successfully"
+    });
+  } catch (error) {
+    console.error('Update provider location error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update location"
+    });
+  }
+};
+
+// @desc   Assign provider to service request - ENHANCED WITH DEBUG LOGGING
+exports.assignProviderToRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const provider = await ServiceProvider.findOne({ user: req.user._id });
+    
+    console.log('🔍 Assign provider called:', {
+      requestId,
+      provider: provider ? provider.businessName : 'Not found',
+      userId: req.user._id
+    });
+
+    if (!provider) {
+      console.log('❌ Provider not found for user:', req.user._id);
+      return res.status(404).json({
+        success: false,
+        error: "Provider profile not found"
+      });
+    }
+
+    const serviceRequest = await ServiceRequest.findOne({
+      requestId: requestId,
+      status: 'pending'
+    });
+
+    console.log('🔍 Service request found:', serviceRequest ? serviceRequest.requestId : 'Not found');
+
+    if (!serviceRequest) {
+      return res.status(404).json({
+        success: false,
+        error: "Request not found or already assigned"
+      });
+    }
+
+    // Check if provider is available
+    if (!provider.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        error: "Please set your status to available to accept requests"
+      });
+    }
+
+    // Assign provider to request
+    serviceRequest.assignedProvider = provider._id;
+    serviceRequest.status = 'accepted';
+    serviceRequest.acceptedAt = new Date();
+    serviceRequest.providerPhone = provider.phone;
+    await serviceRequest.save();
+
+    // ✅ MOVED SMS SENDING CODE HERE
+    try {
+      // Send SMS to user about provider assignment
+      const userPhone = serviceRequest.userPhone;
+      const providerName = provider.businessName;
+      const providerPhone = provider.phone;
+      await smsService.sendProviderAssigned(
+        userPhone,
+        providerName,
+        providerPhone,
+        '10-15' // Estimated ETA
+      );
+      console.log('✅ Provider assignment SMS sent to user');
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError);
+    }
+
+    console.log(`✅ Request ${requestId} assigned to provider: ${provider.businessName}`);
+    res.json({
+      success: true,
+      message: "Request accepted successfully",
+      request: serviceRequest
+    });
+  } catch (error) {
+    console.error("❌ Assign provider error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to accept request: " + error.message
+    });
+  }
 };
