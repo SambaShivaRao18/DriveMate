@@ -31,3 +31,7 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Uploaded files
+/public/uploads/*
+!/public/uploads/.gitkeep
