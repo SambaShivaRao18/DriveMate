@@ -866,3 +866,140 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+// Photo upload functionality
+function previewPhotos(input) {
+    const preview = document.getElementById('photoPreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files.length > 0) {
+        const files = Array.from(input.files).slice(0, 5); // Limit to 5 files
+        
+        files.forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-6 col-md-4 mb-2';
+                    col.innerHTML = `
+                        <div class="photo-preview-card">
+                            <img src="${e.target.result}" class="img-thumbnail" style="height: 100px; width: 100%; object-fit: cover;">
+                            <small class="d-block text-center mt-1">Photo ${index + 1}</small>
+                        </div>
+                    `;
+                    preview.appendChild(col);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        if (files.length > 0) {
+            showAlert(`✅ ${files.length} photo(s) selected for upload`, 'info');
+        }
+    }
+}
+
+// Updated mechanic cost calculation to handle photo uploads
+async function calculateMechanicCost() {
+    const form = document.getElementById('mechanicForm');
+    const formData = new FormData(form);
+    const latitude = formData.get('latitude');
+    const longitude = formData.get('longitude');
+    
+    if (!latitude || !longitude) {
+        showAlert('Please get your current location first', 'warning');
+        return;
+    }
+    if (!formData.get('problemDescription')) {
+        showAlert('Please describe your problem', 'warning');
+        return;
+    }
+
+    const calculateBtn = document.getElementById('calculateMechBtn');
+    calculateBtn.disabled = true;
+    calculateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Finding mechanics...';
+
+    try {
+        // First, create the service request without photos
+        const requestData = {
+            serviceType: 'mechanic',
+            problemDescription: formData.get('problemDescription'),
+            vehicleType: formData.get('vehicleType'),
+            userAddress: formData.get('userAddress'),
+            userPhone: formData.get('userPhone'),
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude)
+        };
+
+        console.log('Sending mechanic request:', requestData);
+        const response = await fetch('/api/services/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        const data = await response.json();
+        console.log('Mechanic response:', data);
+
+        if (data.success) {
+            currentServiceData.mechanic = data;
+            
+            // Upload photos if any were selected
+            const photoFiles = document.getElementById('problemPhotos').files;
+            if (photoFiles.length > 0) {
+                await uploadProblemPhotos(data.request.requestId, photoFiles);
+            }
+            
+            displayMechanicResults(data);
+            
+            if (data.nearestProviders && data.nearestProviders.length > 0) {
+                showAlert('✅ Found nearby mechanics! Check the cost breakdown below.', 'success');
+            } else {
+                showAlert('ℹ️ No mechanics found nearby. Please try a different location.', 'info');
+            }
+        } else {
+            throw new Error(data.error || 'Failed to find mechanics');
+        }
+    } catch (error) {
+        console.error('Error finding mechanics:', error);
+        showAlert('❌ Error: ' + error.message, 'danger');
+    } finally {
+        calculateBtn.disabled = false;
+        calculateBtn.innerHTML = 'Find Nearby Mechanics';
+    }
+}
+
+// Upload photos after request creation
+async function uploadProblemPhotos(requestId, photoFiles) {
+    try {
+        const formData = new FormData();
+        
+        // Add all photo files
+        for (let i = 0; i < photoFiles.length; i++) {
+            formData.append('photos', photoFiles[i]);
+        }
+        
+        const response = await fetch(`/api/services/request/${requestId}/upload-photos`, {
+            method: 'POST',
+            body: formData
+            // Note: Don't set Content-Type header for FormData, browser does it automatically
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('✅ Photos uploaded successfully:', data.photos.length);
+            showAlert(`📸 ${data.photos.length} problem photo(s) uploaded`, 'success');
+        } else {
+            console.warn('Photo upload warning:', data.error);
+        }
+    } catch (error) {
+        console.error('Photo upload error:', error);
+        // Don't fail the entire request if photo upload fails
+        showAlert('⚠️ Service request created, but photo upload failed', 'warning');
+    }
+}

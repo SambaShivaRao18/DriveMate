@@ -7,10 +7,14 @@ const {
   getProviderRequests,
   assignProviderToRequest,
   updateRequestStatus,
-  getRequestDetails
+  getRequestDetails,
+  uploadProblemPhotos,
+  updateProblemDiagnosis,
+  getProblemPhotos
 } = require("../controllers/serviceController");
 
 const { protect } = require("../middleware/authMiddleware");
+const upload = require('../config/upload'); // Import directly
 
 // @route   POST /api/services/geocode
 // @desc    Geocode coordinates to address
@@ -29,7 +33,7 @@ router.get("/my-requests", protect, getUserRequests);
 router.get("/provider-requests", protect, getProviderRequests);
 
 // @route   PUT /api/services/request/:requestId/assign
-// @desc    Assign provider to service request - ADDED MISSING ROUTE
+// @desc    Assign provider to service request
 router.put("/request/:requestId/assign", protect, assignProviderToRequest);
 
 // @route   PUT /api/services/request/:requestId/status
@@ -40,12 +44,37 @@ router.put("/request/:requestId/status", protect, updateRequestStatus);
 // @desc    Get request details for tracking
 router.get("/request/:requestId", protect, getRequestDetails);
 
+// ======================
+// PHOTO UPLOAD ROUTES
+// ======================
+
+// @route   POST /api/services/request/:requestId/upload-photos
+// @desc    Upload problem photos for mechanic service
+router.post("/request/:requestId/upload-photos", 
+  protect, 
+  upload.array('photos', 5), // Maximum 5 files
+  uploadProblemPhotos
+);
+
+// @route   PUT /api/services/request/:requestId/diagnosis
+// @desc    Update problem severity and diagnostic notes
+router.put("/request/:requestId/diagnosis", protect, updateProblemDiagnosis);
+
+// @route   GET /api/services/request/:requestId/photos
+// @desc    Get problem photos for a request
+router.get("/request/:requestId/photos", protect, getProblemPhotos);
+
 // @route   GET /api/services/test
 // @desc    Test service routes
 router.get("/test", protect, (req, res) => {
   res.json({
     message: "Service routes working ✅",
-    user: req.user.email
+    user: req.user.email,
+    features: {
+      photoUpload: "available",
+      diagnosis: "available",
+      geocoding: "available"
+    }
   });
 });
 

@@ -24,6 +24,35 @@ if (mongoose.models.ServiceRequest) {
       type: String,
       trim: true
     },
+    
+    // ADD THESE NEW FIELDS FOR PHOTOS
+    problemPhotos: [{
+      url: {
+        type: String,
+        required: true
+      },
+      caption: {
+        type: String,
+        default: ''
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    
+    problemSeverity: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'critical'],
+      default: 'medium'
+    },
+    
+    diagnosticNotes: {
+      type: String,
+      trim: true
+    },
+    // END OF NEW FIELDS
+
     vehicleType: {
       type: String,
       enum: ['car', 'bike', 'scooter', 'truck', 'other'],

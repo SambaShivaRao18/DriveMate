@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const providerRoutes = require("./routes/providerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const path = require('path');
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(methodOverride('_method'));
 app.use(express.static("public"));
-
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 // Set EJS Engine
 app.set("view engine", "ejs");
 
@@ -83,3 +84,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+//hiiiiiiiiii

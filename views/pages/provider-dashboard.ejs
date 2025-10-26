@@ -324,53 +324,149 @@
     }
 
     // View request details - UPDATED VERSION
-    function viewRequestDetails(requestId) {
-        console.log('🔍 Opening details for request:', requestId);
-        
-        // Find the request in the nearby requests
-        const requestRow = document.getElementById(`request-${requestId}`);
-        if (!requestRow) {
-            showAlert('Request not found', 'danger');
-            return;
-        }
+    // In the viewRequestDetails function, add photo display:
+function viewRequestDetails(requestId) {
+    console.log('🔍 Opening details for request:', requestId);
+    
+    // Show loading state
+    document.getElementById('requestDetailsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading request details...</p>
+        </div>
+    `;
 
-        // Get basic info from the table
-        const serviceType = requestRow.cells[1].innerText.includes('⛽') ? 'fuel' : 'mechanic';
-        const customerInfo = requestRow.cells[2].innerText;
-        const amount = requestRow.cells[4].innerText.replace('₹', '');
+    // Fetch request details with photos
+    fetch(`/api/services/request/${requestId}/photos`)
+        .then(response => response.json())
+        .then(photoData => {
+            // Find the request in the nearby requests for basic info
+            const requestRow = document.getElementById(`request-${requestId}`);
+            if (!requestRow) {
+                showAlert('Request not found', 'danger');
+                return;
+            }
 
-        // Create simple modal content
-        const modalContent = `
-            <div class="request-details">
-                <h6>📋 Request Information</h6>
-                <div class="mb-3">
-                    <p><strong>ID:</strong> ${requestId}</p>
-                    <p><strong>Service Type:</strong> ${serviceType}</p>
-                    <p><strong>Customer:</strong> ${customerInfo.split('\n')[0]}</p>
-                    <p><strong>Phone:</strong> ${customerInfo.split('\n')[1]?.replace('📞 ', '') || 'Not available'}</p>
-                    <p><strong>Estimated Pay:</strong> ₹${amount}</p>
+            const serviceType = requestRow.cells[1].innerText.includes('⛽') ? 'fuel' : 'mechanic';
+            const customerInfo = requestRow.cells[2].innerText;
+            const amount = requestRow.cells[4].innerText.replace('₹', '');
+
+            // Build modal content with photos
+            let photosHTML = '';
+            if (photoData.success && photoData.photos && photoData.photos.length > 0) {
+                photosHTML = `
+                    <div class="mb-3">
+                        <h6>📸 Problem Photos</h6>
+                        <div class="row">
+                            ${photoData.photos.map((photo, index) => `
+                                <div class="col-6 col-md-4 mb-2">
+                                    <div class="card">
+                                        <img src="${photo.url}" class="card-img-top" 
+                                             style="height: 120px; object-fit: cover; cursor: pointer;" 
+                                             onclick="openPhotoModal('${photo.url}', '${photo.caption}')"
+                                             alt="Problem photo ${index + 1}">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted">${photo.caption}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                photosHTML = '<p class="text-muted">No photos uploaded for this request.</p>';
+            }
+
+            const modalContent = `
+                <div class="request-details">
+                    <h6>📋 Request Information</h6>
+                    <div class="mb-3">
+                        <p><strong>ID:</strong> ${requestId}</p>
+                        <p><strong>Service Type:</strong> ${serviceType}</p>
+                        <p><strong>Customer:</strong> ${customerInfo.split('\n')[0]}</p>
+                        <p><strong>Phone:</strong> ${customerInfo.split('\n')[1]?.replace('📞 ', '') || 'Not available'}</p>
+                        <p><strong>Estimated Pay:</strong> ₹${amount}</p>
+                        ${photoData.problemSeverity ? `<p><strong>Problem Severity:</strong> <span class="badge bg-${getSeverityBadgeColor(photoData.problemSeverity)}">${photoData.problemSeverity}</span></p>` : ''}
+                        ${photoData.diagnosticNotes ? `<p><strong>Diagnostic Notes:</strong> ${photoData.diagnosticNotes}</p>` : ''}
+                    </div>
+                    
+                    ${photosHTML}
+                    
+                    <div class="text-center mt-3">
+                        <button class="btn btn-success btn-lg" onclick="acceptRequest('${requestId}', true)">
+                            ✅ Accept This Request
+                        </button>
+                        <button class="btn btn-secondary btn-lg ms-2" data-bs-dismiss="modal">
+                            ❌ Cancel
+                        </button>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <button class="btn btn-success btn-lg" onclick="acceptRequest('${requestId}', true)">
-                        ✅ Accept This Request
-                    </button>
-                    <button class="btn btn-secondary btn-lg ms-2" data-bs-dismiss="modal">
-                        ❌ Cancel
-                    </button>
+            `;
+
+            document.getElementById('requestDetailsContent').innerHTML = modalContent;
+            
+            // Show modal
+            const modalElement = document.getElementById('requestDetailsModal');
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            
+            console.log('✅ Modal opened with photos');
+        })
+        .catch(error => {
+            console.error('Error loading request details:', error);
+            document.getElementById('requestDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>❌ Error loading request details</h6>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        });
+}
+
+// Helper function for severity badge colors
+function getSeverityBadgeColor(severity) {
+    const colors = {
+        'low': 'success',
+        'medium': 'warning', 
+        'high': 'danger',
+        'critical': 'dark'
+    };
+    return colors[severity] || 'secondary';
+}
+
+// Photo modal function
+function openPhotoModal(photoUrl, caption) {
+    const modalHTML = `
+        <div class="modal fade" id="photoModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Problem Photo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${photoUrl}" class="img-fluid" style="max-height: 70vh;" alt="${caption}">
+                        ${caption ? `<p class="mt-3">${caption}</p>` : ''}
+                    </div>
                 </div>
             </div>
-        `;
-
-        // Set modal content
-        document.getElementById('requestDetailsContent').innerHTML = modalContent;
-        
-        // Show modal
-        const modalElement = document.getElementById('requestDetailsModal');
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-        
-        console.log('✅ Modal opened successfully');
+        </div>
+    `;
+    
+    // Remove existing photo modal if any
+    const existingModal = document.getElementById('photoModal');
+    if (existingModal) {
+        existingModal.remove();
     }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const photoModal = new bootstrap.Modal(document.getElementById('photoModal'));
+    photoModal.show();
+}
 
     // Load active requests - FIXED VERSION
     async function loadActiveRequests() {

@@ -22,3 +22,22 @@ body {
     border-radius: 10px;
     border: none;
 }
+
+/* Photo upload styles */
+.photo-preview-card {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+}
+
+.photo-preview-card img {
+    border-radius: 0.25rem;
+}
+
+/* Severity badges */
+.badge.bg-success { background-color: #198754 !important; }
+.badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.badge.bg-danger { background-color: #dc3545 !important; }
+.badge.bg-dark { background-color: #212529 !important; }

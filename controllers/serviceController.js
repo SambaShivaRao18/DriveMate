@@ -2,7 +2,10 @@ const ServiceRequest = require("../models/ServiceRequest");
 const ServiceProvider = require("../models/ServiceProvider");
 const smsService = require("../utils/smsService");
 const emailService = require("../utils/emailService");
-const fetch = require('node-fetch'); // ADD THIS LINE
+const fetch = require('node-fetch');
+
+// REMOVE this line if it exists:
+// const { upload, handleUploadErrors } = require('../config/upload');
 
 // Simple distance calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -63,7 +66,7 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
   }
 };
 
-// @desc   Geocode coordinates to address - FIXED VERSION
+// @desc   Geocode coordinates to address
 exports.geocodeAddress = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
@@ -274,7 +277,7 @@ exports.getProviderRequests = async (req, res) => {
   }
 };
 
-// @desc   Assign provider to service request - FIXED VERSION
+// @desc   Assign provider to service request
 exports.assignProviderToRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -399,7 +402,7 @@ exports.updateRequestStatus = async (req, res) => {
   }
 };
 
-// @desc   Get request details for tracking (accessible to providers and request owners)
+// @desc   Get request details for tracking
 exports.getRequestDetails = async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -441,6 +444,138 @@ exports.getRequestDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to get request details"
+    });
+  }
+};
+
+// @desc   Upload problem photos for mechanic service
+exports.uploadProblemPhotos = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const captions = req.body.captions || [];
+
+    console.log(`📸 Uploading photos for request: ${requestId}`);
+
+    const serviceRequest = await ServiceRequest.findOne({ requestId });
+    
+    if (!serviceRequest) {
+      return res.status(404).json({
+        success: false,
+        error: "Service request not found"
+      });
+    }
+
+    // Check if service type is mechanic
+    if (serviceRequest.serviceType !== 'mechanic') {
+      return res.status(400).json({
+        success: false,
+        error: "Photos can only be uploaded for mechanic services"
+      });
+    }
+
+    // Process uploaded photos
+    const photoUrls = req.files.map((file, index) => ({
+      url: `/uploads/problems/${file.filename}`,
+      caption: captions[index] || `Problem photo ${index + 1}`,
+      uploadedAt: new Date()
+    }));
+
+    // Add photos to service request
+    serviceRequest.problemPhotos.push(...photoUrls);
+    await serviceRequest.save();
+
+    console.log(`✅ ${photoUrls.length} photos uploaded for request ${requestId}`);
+
+    res.json({
+      success: true,
+      message: "Photos uploaded successfully",
+      photos: photoUrls,
+      requestId: requestId
+    });
+  } catch (error) {
+    console.error("❌ Photo upload error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to upload photos: " + error.message
+    });
+  }
+};
+
+// @desc   Update problem severity and diagnostic notes
+exports.updateProblemDiagnosis = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { problemSeverity, diagnosticNotes } = req.body;
+
+    console.log(`🔧 Updating diagnosis for request: ${requestId}`);
+
+    const serviceRequest = await ServiceRequest.findOne({ requestId });
+    
+    if (!serviceRequest) {
+      return res.status(404).json({
+        success: false,
+        error: "Service request not found"
+      });
+    }
+
+    // Update diagnosis fields
+    if (problemSeverity) {
+      serviceRequest.problemSeverity = problemSeverity;
+    }
+    if (diagnosticNotes) {
+      serviceRequest.diagnosticNotes = diagnosticNotes;
+    }
+
+    await serviceRequest.save();
+
+    console.log(`✅ Diagnosis updated for request ${requestId}`);
+
+    res.json({
+      success: true,
+      message: "Diagnosis updated successfully",
+      request: {
+        requestId: serviceRequest.requestId,
+        problemSeverity: serviceRequest.problemSeverity,
+        diagnosticNotes: serviceRequest.diagnosticNotes,
+        problemPhotos: serviceRequest.problemPhotos
+      }
+    });
+  } catch (error) {
+    console.error("❌ Diagnosis update error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update diagnosis: " + error.message
+    });
+  }
+};
+
+// @desc   Get problem photos for a request
+exports.getProblemPhotos = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const serviceRequest = await ServiceRequest.findOne({ requestId })
+      .select('problemPhotos problemSeverity diagnosticNotes serviceType');
+
+    if (!serviceRequest) {
+      return res.status(404).json({
+        success: false,
+        error: "Service request not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      photos: serviceRequest.problemPhotos,
+      problemSeverity: serviceRequest.problemSeverity,
+      diagnosticNotes: serviceRequest.diagnosticNotes,
+      serviceType: serviceRequest.serviceType
+    });
+  } catch (error) {
+    console.error("❌ Get photos error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get photos: " + error.message
     });
   }
 };
