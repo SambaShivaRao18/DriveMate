@@ -1,0 +1,324 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<main class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>My Profile</h2>
+                <button class="btn btn-outline-primary" onclick="editProfile()">
+                    ✏️ Edit Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <div class="row">
+        <!-- Personal Information -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">👤 Personal Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" 
+                             style="width: 80px; height: 80px; font-size: 2rem;">
+                            <span class="text-white"><%= user.name.charAt(0).toUpperCase() %></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Full Name:</strong>
+                        <p class="mb-1"><%= user.name %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Email:</strong>
+                        <p class="mb-1"><%= user.email %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Phone:</strong>
+                        <p class="mb-1"><%= user.phone %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Role:</strong>
+                        <p class="mb-1">
+                            <span class="badge bg-info text-capitalize"><%= user.role %></span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Member Since:</strong>
+                        <p class="mb-0"><%= new Date(user.createdAt).toLocaleDateString() %></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">📊 Service Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Total Services:</strong>
+                        <h4 class="text-primary"><%= statistics.totalServices %></h4>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Fuel Services:</strong>
+                        <p class="mb-1"><%= statistics.fuelServices %> requests</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Mechanic Services:</strong>
+                        <p class="mb-1"><%= statistics.mechanicServices %> requests</p>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Total Spent:</strong>
+                        <h5 class="text-success">₹<%= statistics.totalSpent %></h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-md-8">
+            <!-- Recent Service Requests -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">🔄 Recent Service Requests</h5>
+                    <a href="/dashboard" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <% if (serviceRequests.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Service</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% serviceRequests.forEach(request => { %>
+                                        <tr>
+                                            <td>
+                                                <strong><%= request.requestId %></strong>
+                                            </td>
+                                            <td>
+                                                <% if (request.serviceType === 'fuel') { %>
+                                                    ⛽ <%= request.fuelType %> - <%= request.quantity %>L
+                                                <% } else { %>
+                                                    🔧 <%= request.vehicleType %>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <span class="badge <%- getStatusBadgeClass(request.status) %>">
+                                                    <%= request.status.replace('_', ' ') %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= new Date(request.createdAt).toLocaleDateString() %>
+                                            </td>
+                                            <td>
+                                                ₹<%= request.costEstimate.totalCost %>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <p class="text-muted text-center">No service requests yet.</p>
+                        <div class="text-center">
+                            <a href="/dashboard" class="btn btn-primary">Request Your First Service</a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Recent Payments -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">💰 Recent Payments</h5>
+                    <a href="/dashboard" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <% if (payments.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Service</th>
+                                        <th>Provider</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% payments.forEach(payment => { %>
+                                        <tr>
+                                            <td><%= new Date(payment.paidAt).toLocaleDateString() %></td>
+                                            <td>
+                                                <%= payment.request.serviceType === 'fuel' ? '⛽ Fuel' : '🔧 Mechanic' %>
+                                            </td>
+                                            <td><%= payment.provider.businessName %></td>
+                                            <td class="text-success">₹<%= payment.amount %></td>
+                                            <td>
+                                                <span class="badge bg-secondary text-capitalize">
+                                                    <%= payment.paymentMethod %>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <p class="text-muted text-center">No payment history yet.</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" class="form-control" name="name" value="<%= user.name %>" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" value="<%= user.email %>" disabled>
+                        <div class="form-text">Email cannot be changed</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number *</label>
+                        <input type="tel" class="form-control" name="phone" value="<%= user.phone %>" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateProfile()">Update Profile</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+// Edit profile modal
+function editProfile() {
+    const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
+    modal.show();
+}
+
+// Update profile
+async function updateProfile() {
+    const form = document.getElementById('editProfileForm');
+    const formData = new FormData(form);
+    
+    const updateData = {
+        name: formData.get('name'),
+        phone: formData.get('phone')
+    };
+
+    try {
+        const response = await fetch('/auth/profile/update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('✅ Profile updated successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
+            modal.hide();
+            // Reload page to show updated data
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('Update profile error:', error);
+        showAlert('❌ Error updating profile: ' + error.message, 'danger');
+    }
+}
+
+// Utility function to show alerts
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer');
+    const alertId = 'alert-' + Date.now();
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    alertContainer.innerHTML = alertHTML;
+    
+    setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+</style>

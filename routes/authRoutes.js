@@ -1,4 +1,5 @@
 
+const profileController = require("../controllers/profileController");
 const express = require("express");
 const router = express.Router();
 const { 
@@ -33,6 +34,15 @@ router.get("/dashboard", protect, showDashboard);
 // @desc    Logout user
 router.get("/logout", logoutUser);
 
+// @desc    Show user profile based on role
+router.get("/profile", protect, (req, res) => {
+  if (req.user.role === 'traveller') {
+    return profileController.showTravellerProfile(req, res);
+  } else {
+    return profileController.showProviderProfile(req, res);
+  }
+});
+
 // ======================
 // API ROUTES (POST)
 // ======================
@@ -44,6 +54,14 @@ router.post("/register", registerUser);
 // @route   POST /auth/login
 // @desc    Login user
 router.post("/login", loginUser);
+
+// @route   PUT /auth/profile/update
+// @desc    Update user profile
+router.put("/profile/update", protect, profileController.updateUserProfile);
+
+// @route   PUT /auth/profile/provider/update
+// @desc    Update provider profile
+router.put("/profile/provider/update", protect, profileController.updateProviderProfile);
 
 // ======================
 // TEST ROUTE

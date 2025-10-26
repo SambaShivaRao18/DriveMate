@@ -1,0 +1,531 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+
+<main class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Business Profile</h2>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="editProviderProfile()">
+                        ✏️ Edit Business Profile
+                    </button>
+                    <a href="/provider/dashboard" class="btn btn-primary">
+                        📊 Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <div class="row">
+        <!-- Business Information -->
+        <div class="col-md-4 mb-4">
+            <!-- Business Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <% if (provider.businessType === 'fuel-station') { %>
+                            ⛽ Fuel Station
+                        <% } else { %>
+                            🔧 Mechanic Shop
+                        <% } %>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" 
+                             style="width: 80px; height: 80px; font-size: 2rem;">
+                            <span class="text-white"><%= provider.businessName.charAt(0).toUpperCase() %></span>
+                        </div>
+                        <h5 class="mt-2"><%= provider.businessName %></h5>
+                        <span class="badge bg-<%= provider.isVerified ? 'success' : 'warning' %>">
+                            <%= provider.isVerified ? '✅ Verified' : '⏳ Pending Verification' %>
+                        </span>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Business Type:</strong>
+                        <p class="mb-1 text-capitalize">
+                            <%= provider.businessType.replace('-', ' ') %>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Contact Email:</strong>
+                        <p class="mb-1"><%= provider.email %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Contact Phone:</strong>
+                        <p class="mb-1"><%= provider.phone %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Business Address:</strong>
+                        <p class="mb-1 small"><%= provider.address %></p>
+                    </div>
+                    
+                    <% if (provider.operatingHours && provider.operatingHours.open) { %>
+                    <div class="mb-0">
+                        <strong>Operating Hours:</strong>
+                        <p class="mb-0">
+                            <%= provider.operatingHours.open %> - 
+                            <%= provider.operatingHours.close || '24/7' %>
+                        </p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Business Statistics -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">📊 Business Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Total Services:</strong>
+                        <h4 class="text-primary"><%= statistics.totalServices %></h4>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Completed Services:</strong>
+                        <p class="mb-1"><%= statistics.completedServices %></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Completion Rate:</strong>
+                        <p class="mb-1">
+                            <span class="badge bg-<%= statistics.completionRate >= 80 ? 'success' : statistics.completionRate >= 60 ? 'warning' : 'danger' %>">
+                                <%= statistics.completionRate %>%
+                            </span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Customer Rating:</strong>
+                        <p class="mb-1">
+                            <% if (provider.rating > 0) { %>
+                                ⭐ <%= provider.rating.toFixed(1) %> 
+                                <small class="text-muted">(<%= provider.totalRatings %> reviews)</small>
+                            <% } else { %>
+                                <span class="text-muted">No ratings yet</span>
+                            <% } %>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Total Earnings:</strong>
+                        <h5 class="text-success">₹<%= statistics.totalEarnings %></h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Information -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">💰 Pricing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Assistance Fee:</strong>
+                        <p class="mb-1">₹<%= provider.pricing.assistanceFee %></p>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Travel Fee per Km:</strong>
+                        <p class="mb-1">₹<%= provider.pricing.travelFeePerKm %></p>
+                    </div>
+                    
+                    <% if (provider.businessType === 'fuel-station' && provider.pricing.fuelPrices) { %>
+                    <div class="mb-0">
+                        <strong>Fuel Prices:</strong>
+                        <% if (provider.pricing.fuelPrices.petrol > 0) { %>
+                            <p class="mb-1 small">Petrol: ₹<%= provider.pricing.fuelPrices.petrol %></p>
+                        <% } %>
+                        <% if (provider.pricing.fuelPrices.diesel > 0) { %>
+                            <p class="mb-1 small">Diesel: ₹<%= provider.pricing.fuelPrices.diesel %></p>
+                        <% } %>
+                        <% if (provider.pricing.fuelPrices.cng > 0) { %>
+                            <p class="mb-0 small">CNG: ₹<%= provider.pricing.fuelPrices.cng %></p>
+                        <% } %>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Activity -->
+        <div class="col-md-8">
+            <!-- Services Offered -->
+            <% if (provider.businessType === 'mechanic' && provider.services && provider.services.length > 0) { %>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">🛠️ Services Offered</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <% provider.services.forEach(service => { %>
+                        <div class="col-md-6 mb-2">
+                            <span class="badge bg-light text-dark border">✓ <%= service %></span>
+                        </div>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <!-- Recent Service Requests -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">🔄 Recent Service Requests</h5>
+                    <a href="/provider/dashboard" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <% if (serviceRequests.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Customer</th>
+                                        <th>Service</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Earnings</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% serviceRequests.forEach(request => { %>
+                                        <tr>
+                                            <td>
+                                                <strong><%= request.requestId %></strong>
+                                            </td>
+                                            <td>
+                                                <%= request.user.name %>
+                                                <br>
+                                                <small class="text-muted"><%= request.user.phone %></small>
+                                            </td>
+                                            <td>
+                                                <% if (request.serviceType === 'fuel') { %>
+                                                    ⛽ <%= request.fuelType %> - <%= request.quantity %>L
+                                                <% } else { %>
+                                                    🔧 <%= request.vehicleType %>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <span class="badge <%= getStatusBadgeClass(request.status) %>">
+                                                    <%= request.status.replace('_', ' ') %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= new Date(request.createdAt).toLocaleDateString() %>
+                                            </td>
+                                            <td class="text-success">
+                                                <% if (request.status === 'completed') { %>
+                                                    ₹<%= request.actualCost || request.costEstimate.totalCost %>
+                                                <% } else { %>
+                                                    -
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <p class="text-muted text-center">No service requests completed yet.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Recent Payments -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">💰 Recent Payments</h5>
+                    <a href="/provider/dashboard" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <% if (payments.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Service</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% payments.forEach(payment => { %>
+                                        <tr>
+                                            <td><%= new Date(payment.paidAt).toLocaleDateString() %></td>
+                                            <td><%= payment.user.name %></td>
+                                            <td>
+                                                <%= payment.request.serviceType === 'fuel' ? '⛽ Fuel' : '🔧 Mechanic' %>
+                                            </td>
+                                            <td class="text-success">₹<%= payment.amount %></td>
+                                            <td>
+                                                <span class="badge bg-secondary text-capitalize">
+                                                    <%= payment.paymentMethod %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">Paid</span>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <p class="text-muted text-center">No payment history yet.</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Edit Provider Profile Modal -->
+<div class="modal fade" id="editProviderProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Edit Business Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProviderProfileForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Business Name *</label>
+                                <input type="text" class="form-control" name="businessName" 
+                                       value="<%= provider.businessName %>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Contact Email *</label>
+                                <input type="email" class="form-control" name="email" 
+                                       value="<%= provider.email %>" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Contact Phone *</label>
+                                <input type="tel" class="form-control" name="phone" 
+                                       value="<%= provider.phone %>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Business Address *</label>
+                                <textarea class="form-control" name="address" rows="2" required><%= provider.address %></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Assistance Fee (₹) *</label>
+                                <input type="number" class="form-control" name="assistanceFee" 
+                                       value="<%= provider.pricing.assistanceFee %>" min="50" max="1000" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Travel Fee per Km (₹) *</label>
+                                <input type="number" class="form-control" name="travelFeePerKm" 
+                                       value="<%= provider.pricing.travelFeePerKm %>" min="5" max="50" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <% if (provider.businessType === 'mechanic') { %>
+                    <div class="mb-3">
+                        <label class="form-label">Services Offered</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <% const commonServices = ['engine repair', 'tyre change', 'battery replacement', 'brake repair', 'ac service', 'electrical repair', 'general service', 'fuel delivery']; %>
+                                <% commonServices.forEach(service => { %>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="services" 
+                                           value="<%= service %>" 
+                                           <%= provider.services && provider.services.includes(service) ? 'checked' : '' %>>
+                                    <label class="form-check-label text-capitalize">
+                                        <%= service %>
+                                    </label>
+                                </div>
+                                <% }) %>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Opening Time</label>
+                                <input type="time" class="form-control" name="operatingHours[open]" 
+                                       value="<%= provider.operatingHours && provider.operatingHours.open %>">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Closing Time</label>
+                                <input type="time" class="form-control" name="operatingHours[close]" 
+                                       value="<%= provider.operatingHours && provider.operatingHours.close %>">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateProviderProfile()">Update Business Profile</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/scripts') %>
+
+<script>
+// Helper function for status badge classes
+function getStatusBadgeClass(status) {
+    const statusMap = {
+        'pending': 'bg-warning',
+        'accepted': 'bg-info',
+        'en_route': 'bg-primary',
+        'service_started': 'bg-secondary',
+        'completed': 'bg-success',
+        'cancelled': 'bg-danger'
+    };
+    return statusMap[status] || 'bg-secondary';
+}
+
+// Edit provider profile modal
+function editProviderProfile() {
+    const modal = new bootstrap.Modal(document.getElementById('editProviderProfileModal'));
+    modal.show();
+}
+
+// Update provider profile
+async function updateProviderProfile() {
+    const form = document.getElementById('editProviderProfileForm');
+    const formData = new FormData(form);
+    
+    // Collect form data
+    const updateData = {
+        businessName: formData.get('businessName'),
+        address: formData.get('address'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        assistanceFee: formData.get('assistanceFee'),
+        travelFeePerKm: formData.get('travelFeePerKm'),
+        operatingHours: {
+            open: formData.get('operatingHours[open]'),
+            close: formData.get('operatingHours[close]')
+        }
+    };
+
+    // Collect services if mechanic
+    const services = [];
+    if ('<%= provider.businessType %>' === 'mechanic') {
+        const serviceCheckboxes = document.querySelectorAll('input[name="services"]:checked');
+        serviceCheckboxes.forEach(checkbox => {
+            services.push(checkbox.value);
+        });
+        updateData.services = services;
+    }
+
+    try {
+        const response = await fetch('/auth/profile/provider/update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('✅ Business profile updated successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editProviderProfileModal'));
+            modal.hide();
+            // Reload page to show updated data
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('Update provider profile error:', error);
+        showAlert('❌ Error updating business profile: ' + error.message, 'danger');
+    }
+}
+
+// Utility function to show alerts
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer');
+    const alertId = 'alert-' + Date.now();
+    const alertHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    alertContainer.innerHTML = alertHTML;
+    
+    setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.form-check {
+    margin-bottom: 8px;
+}
+</style>
