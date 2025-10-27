@@ -46,6 +46,45 @@ if (mongoose.models.ServiceProvider) {
       type: String,
       required: true
     },
+    
+    // ADD BUSINESS PHOTOS FIELD HERE
+    businessPhotos: [{
+      url: {
+        type: String,
+        required: true
+      },
+      publicId: {
+        type: String,
+        required: true
+      },
+      caption: {
+        type: String,
+        default: ''
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+
+    // PAYMENT FIELDS
+    upiId: {
+      type: String,
+      trim: true
+    },
+    qrCode: {
+      url: String,
+      publicId: String,
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    acceptsQRPayments: {
+      type: Boolean,
+      default: false
+    },
+    // END ADDED PAYMENT FIELDS
     isVerified: {
       type: Boolean,
       default: false

@@ -14,8 +14,8 @@ const {
 } = require("../controllers/serviceController");
 
 const { protect } = require("../middleware/authMiddleware");
-const upload = require('../config/upload'); // Import directly
-
+const { problemUpload } = require('../config/upload');
+ 
 // @route   POST /api/services/geocode
 // @desc    Geocode coordinates to address
 router.post("/geocode", protect, geocodeAddress);
@@ -50,9 +50,9 @@ router.get("/request/:requestId", protect, getRequestDetails);
 
 // @route   POST /api/services/request/:requestId/upload-photos
 // @desc    Upload problem photos for mechanic service
-router.post("/request/:requestId/upload-photos", 
-  protect, 
-  upload.array('photos', 5), // Maximum 5 files
+router.post("/request/:requestId/upload-photos",
+  protect,
+  problemUpload.array('photos', 5),
   uploadProblemPhotos
 );
 

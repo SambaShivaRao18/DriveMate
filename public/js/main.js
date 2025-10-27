@@ -39,17 +39,17 @@ function getLocation(serviceType) {
     const latField = serviceType === 'fuel' ? 'fuelLatitude' : 'mechanicLatitude';
     const lngField = serviceType === 'fuel' ? 'fuelLongitude' : 'mechanicLongitude';
     console.log(`📍 Getting location for ${serviceType}`);
-    
+
     // Clear previous values
     document.getElementById(locationField).value = 'Getting location...';
     document.getElementById(latField).value = '';
     document.getElementById(lngField).value = '';
 
     // Clear address field - FIXED SELECTOR
-    const addressField = serviceType === 'fuel' ? 
+    const addressField = serviceType === 'fuel' ?
         document.querySelector('#fuelForm textarea[name="userAddress"]') :
         document.querySelector('#mechanicForm textarea[name="userAddress"]');
-    
+
     if (addressField) {
         addressField.value = '';
     }
@@ -75,7 +75,7 @@ async function showPosition(position, serviceType, locationField, latField, lngF
     const latitude = position.coords.latitude;
     const longitude = position.coords.longitude;
     console.log(`📍 Coordinates obtained: ${latitude}, ${longitude}`);
-    
+
     // Update hidden fields FIRST
     document.getElementById(latField).value = latitude;
     document.getElementById(lngField).value = longitude;
@@ -84,15 +84,15 @@ async function showPosition(position, serviceType, locationField, latField, lngF
     try {
         // Get address from coordinates
         const address = await geocodeCoordinates(latitude, longitude);
-        
+
         // Update location display field
         document.getElementById(locationField).value = `📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        
+
         // FIXED: Correct address field selection
-        const addressField = serviceType === 'fuel' ? 
+        const addressField = serviceType === 'fuel' ?
             document.querySelector('#fuelForm textarea[name="userAddress"]') :
             document.querySelector('#mechanicForm textarea[name="userAddress"]');
-        
+
         if (addressField) {
             addressField.value = address;
             console.log('✅ Address auto-filled:', address);
@@ -104,22 +104,22 @@ async function showPosition(position, serviceType, locationField, latField, lngF
                 fallbackField.value = address;
             }
         }
-        
+
         showAlert('📍 Location obtained and address auto-filled!', 'success');
     } catch (error) {
         console.error('Error in showPosition:', error);
         // Fallback: just show coordinates
         document.getElementById(locationField).value = `📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        
+
         // FIXED: Correct fallback address field selection
-        const addressField = serviceType === 'fuel' ? 
+        const addressField = serviceType === 'fuel' ?
             document.querySelector('#fuelForm textarea[name="userAddress"]') :
             document.querySelector('#mechanicForm textarea[name="userAddress"]');
-            
+
         if (addressField) {
             addressField.value = `Near ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         }
-        
+
         showAlert('📍 Location obtained! Please verify the address.', 'info');
     }
 }
@@ -517,9 +517,9 @@ async function loadUserRequests() {
                                         <strong>Request ID:</strong> ${request.requestId}<br>
                                         <strong>Date:</strong> ${date}<br>
                                         ${request.serviceType === 'fuel' ?
-                            `<strong>Fuel:</strong> ${request.quantity}L ${request.fuelType}` :
-                            `<strong>Problem:</strong> ${request.problemDescription}`
-                        }
+                        `<strong>Fuel:</strong> ${request.quantity}L ${request.fuelType}` :
+                        `<strong>Problem:</strong> ${request.problemDescription}`
+                    }
                                     </p>
                                     ${paymentButton}
                                     ${ratingButton}
@@ -527,17 +527,17 @@ async function loadUserRequests() {
                                 <div class="text-end ms-3">
                                     <p class="mb-1"><strong>Estimated Cost:</strong> ₹${request.costEstimate.totalCost}</p>
                                     ${request.assignedProvider ?
-                            `<p class="mb-1 small text-success">Assigned to: ${request.assignedProvider.businessName}</p>` :
-                            '<p class="mb-1 small text-warning">Waiting for provider...</p>'
-                        }
+                        `<p class="mb-1 small text-success">Assigned to: ${request.assignedProvider.businessName}</p>` :
+                        '<p class="mb-1 small text-warning">Waiting for provider...</p>'
+                    }
                                     ${request.paymentStatus === 'paid' ?
-                            `<p class="mb-1 small text-success">💰 Payment Completed</p>` :
-                            ''
-                        }
+                        `<p class="mb-1 small text-success">💰 Payment Completed</p>` :
+                        ''
+                    }
                                     ${request.rating ?
-                            `<p class="mb-1 small text-warning">⭐ Rated: ${request.rating}/5</p>` :
-                            ''
-                        }
+                        `<p class="mb-1 small text-warning">⭐ Rated: ${request.rating}/5</p>` :
+                        ''
+                    }
                                 </div>
                             </div>
                         </div>
@@ -653,12 +653,53 @@ function showPaymentModal(requestId, serviceDetails, amount) {
     document.getElementById('paymentRequestId').value = requestId;
     document.getElementById('paymentServiceDetails').textContent = serviceDetails;
     document.getElementById('paymentAmount').textContent = `₹${amount}`;
+
     // Reset form
     document.getElementById('paymentMethod').value = '';
     document.getElementById('transactionId').value = '';
     document.getElementById('transactionIdField').style.display = 'none';
+    document.getElementById('qrCodeSection').style.display = 'none';
+    document.getElementById('processPaymentBtn').style.display = 'block';
+
+    // Load provider QR code if available
+    loadProviderQRCode(requestId);
+    debugProviderData(requestId);
+
     const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
     modal.show();
+}
+
+// Load provider QR code for the request
+async function loadProviderQRCode(requestId) {
+    try {
+        const response = await fetch(`/api/services/request/${requestId}`);
+        const data = await response.json();
+
+        if (data.success && data.request.assignedProvider && data.request.assignedProvider.qrCode) {
+            // Store provider info for later use
+            window.currentProviderInfo = {
+                qrCode: data.request.assignedProvider.qrCode.url,
+                upiId: data.request.assignedProvider.upiId,
+                businessName: data.request.assignedProvider.businessName
+            };
+        } else {
+            window.currentProviderInfo = null;
+        }
+    } catch (error) {
+        console.error('Error loading provider QR code:', error);
+        window.currentProviderInfo = null;
+    }
+}
+
+
+// Mark QR payment as completed
+function markQRPaymentAsDone() {
+    // Just show the process payment button, user will enter transaction ID in the field
+    document.getElementById('processPaymentBtn').style.display = 'block';
+    showAlert('✅ Please enter your UPI Transaction ID in the field above and click "Process Payment".', 'success');
+
+    // Optional: Focus on the transaction ID field for better UX
+    document.getElementById('transactionId').focus();
 }
 
 // Process payment
@@ -668,14 +709,31 @@ async function processPayment() {
     const transactionId = document.getElementById('transactionId').value;
     const amountText = document.getElementById('paymentAmount').textContent;
     const amount = parseFloat(amountText.replace('₹', ''));
+
     if (!paymentMethod) {
         showAlert('Please select payment method', 'warning');
         return;
     }
-    if (paymentMethod !== 'cash' && !transactionId) {
-        showAlert('Please enter transaction ID', 'warning');
-        return;
+
+    // Validate QR payment
+    if (paymentMethod === 'qr') {
+        if (!transactionId) {
+            showAlert('Please enter transaction ID for QR payment', 'warning');
+            return;
+        }
+        if (!window.currentProviderInfo || !window.currentProviderInfo.qrCode) {
+            showAlert('QR code payment not available for this provider', 'warning');
+            return;
+        }
     }
+
+    // Validate cash payment
+    if (paymentMethod === 'cash') {
+        if (!confirm('Please confirm that you have collected cash payment from the customer.')) {
+            return;
+        }
+    }
+
     try {
         const response = await fetch('/api/payments/process', {
             method: 'POST',
@@ -686,9 +744,10 @@ async function processPayment() {
                 requestId,
                 paymentMethod,
                 amount,
-                transactionId: paymentMethod !== 'cash' ? transactionId : undefined
+                transactionId: paymentMethod === 'qr' ? transactionId : `CASH-${requestId}-${Date.now()}`
             })
         });
+
         const data = await response.json();
         if (data.success) {
             showAlert('✅ Payment processed successfully!', 'success');
@@ -778,13 +837,38 @@ async function submitRating() {
 // Payment method change handler
 function setupPaymentMethodHandler() {
     const paymentMethodSelect = document.getElementById('paymentMethod');
+    const transactionField = document.getElementById('transactionIdField');
+    const qrCodeSection = document.getElementById('qrCodeSection');
+    const processPaymentBtn = document.getElementById('processPaymentBtn');
+
     if (paymentMethodSelect) {
         paymentMethodSelect.addEventListener('change', function () {
-            const transactionField = document.getElementById('transactionIdField');
-            if (this.value !== 'cash') {
-                transactionField.style.display = 'block';
-            } else {
+            if (this.value === 'qr') {
+                // Show QR code section
+                if (window.currentProviderInfo && window.currentProviderInfo.qrCode) {
+                    document.getElementById('qrCodeImage').src = window.currentProviderInfo.qrCode;
+                    document.getElementById('upiIdText').textContent = `UPI ID: ${window.currentProviderInfo.upiId || 'Not available'}`;
+                    qrCodeSection.style.display = 'block';
+                    transactionField.style.display = 'block';
+                    processPaymentBtn.style.display = 'none'; // Hide process button initially
+                    // Clear any previous transaction ID
+                    document.getElementById('transactionId').value = '';
+                } else {
+                    alert('❌ QR code payment not available for this provider. Please select cash payment.');
+                    this.value = '';
+                    qrCodeSection.style.display = 'none';
+                    transactionField.style.display = 'none';
+                    processPaymentBtn.style.display = 'block';
+                }
+            }
+            else if (this.value === 'cash') {
+                qrCodeSection.style.display = 'none';
                 transactionField.style.display = 'none';
+                processPaymentBtn.style.display = 'block';
+            } else {
+                qrCodeSection.style.display = 'none';
+                transactionField.style.display = 'none';
+                processPaymentBtn.style.display = 'block';
             }
         });
     }
@@ -871,15 +955,15 @@ document.addEventListener('DOMContentLoaded', function () {
 function previewPhotos(input) {
     const preview = document.getElementById('photoPreview');
     preview.innerHTML = '';
-    
+
     if (input.files && input.files.length > 0) {
         const files = Array.from(input.files).slice(0, 5); // Limit to 5 files
-        
+
         files.forEach((file, index) => {
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
-                
-                reader.onload = function(e) {
+
+                reader.onload = function (e) {
                     const col = document.createElement('div');
                     col.className = 'col-6 col-md-4 mb-2';
                     col.innerHTML = `
@@ -890,11 +974,11 @@ function previewPhotos(input) {
                     `;
                     preview.appendChild(col);
                 };
-                
+
                 reader.readAsDataURL(file);
             }
         });
-        
+
         if (files.length > 0) {
             showAlert(`✅ ${files.length} photo(s) selected for upload`, 'info');
         }
@@ -907,7 +991,7 @@ async function calculateMechanicCost() {
     const formData = new FormData(form);
     const latitude = formData.get('latitude');
     const longitude = formData.get('longitude');
-    
+
     if (!latitude || !longitude) {
         showAlert('Please get your current location first', 'warning');
         return;
@@ -947,15 +1031,15 @@ async function calculateMechanicCost() {
 
         if (data.success) {
             currentServiceData.mechanic = data;
-            
+
             // Upload photos if any were selected
             const photoFiles = document.getElementById('problemPhotos').files;
             if (photoFiles.length > 0) {
                 await uploadProblemPhotos(data.request.requestId, photoFiles);
             }
-            
+
             displayMechanicResults(data);
-            
+
             if (data.nearestProviders && data.nearestProviders.length > 0) {
                 showAlert('✅ Found nearby mechanics! Check the cost breakdown below.', 'success');
             } else {
@@ -977,20 +1061,20 @@ async function calculateMechanicCost() {
 async function uploadProblemPhotos(requestId, photoFiles) {
     try {
         const formData = new FormData();
-        
+
         // Add all photo files
         for (let i = 0; i < photoFiles.length; i++) {
             formData.append('photos', photoFiles[i]);
         }
-        
+
         const response = await fetch(`/api/services/request/${requestId}/upload-photos`, {
             method: 'POST',
             body: formData
             // Note: Don't set Content-Type header for FormData, browser does it automatically
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             console.log('✅ Photos uploaded successfully:', data.photos.length);
             showAlert(`📸 ${data.photos.length} problem photo(s) uploaded`, 'success');
@@ -1001,5 +1085,23 @@ async function uploadProblemPhotos(requestId, photoFiles) {
         console.error('Photo upload error:', error);
         // Don't fail the entire request if photo upload fails
         showAlert('⚠️ Service request created, but photo upload failed', 'warning');
+    }
+}
+// Debug function to check provider data
+async function debugProviderData(requestId) {
+    try {
+        const response = await fetch(`/api/services/request/${requestId}`);
+        const data = await response.json();
+        console.log('🔍 DEBUG - Full request data:', data);
+        if (data.success && data.request.assignedProvider) {
+            console.log('🔍 DEBUG - Provider data:', data.request.assignedProvider);
+            console.log('🔍 DEBUG - QR Code exists:', data.request.assignedProvider.qrCode);
+            console.log('🔍 DEBUG - UPI ID exists:', data.request.assignedProvider.upiId);
+            console.log('🔍 DEBUG - Accepts QR Payments:', data.request.assignedProvider.acceptsQRPayments);
+        } else {
+            console.log('🔍 DEBUG - No assigned provider or request failed');
+        }
+    } catch (error) {
+        console.error('🔍 DEBUG - Error:', error);
     }
 }

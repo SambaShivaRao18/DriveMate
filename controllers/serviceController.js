@@ -3,9 +3,7 @@ const ServiceProvider = require("../models/ServiceProvider");
 const smsService = require("../utils/smsService");
 const emailService = require("../utils/emailService");
 const fetch = require('node-fetch');
-
-// REMOVE this line if it exists:
-// const { upload, handleUploadErrors } = require('../config/upload');
+const { problemUpload, uploadProblemPhotosToCloudinary, deleteFromCloudinary } = require('../config/upload');
 
 // Simple distance calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -49,6 +47,7 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
       .populate('user', 'name phone')
       .limit(5);
     console.log(`📍 MongoDB geospatial query found ${providers.length} ${serviceType} providers`);
+
     // Calculate actual distances for display
     const providersWithDistance = providers.map(provider => {
       const distance = calculateDistance(
@@ -59,6 +58,7 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
       );
       return { ...provider.toObject(), distance: Math.round(distance * 10) / 10 };
     });
+
     return providersWithDistance;
   } catch (error) {
     console.error("❌ MongoDB geospatial query error:", error);
@@ -76,6 +76,7 @@ exports.geocodeAddress = async (req, res) => {
         error: 'Latitude and longitude are required'
       });
     }
+
     console.log(`🌍 Geocoding request: ${latitude}, ${longitude}`);
     // Use OpenStreetMap Nominatim API through backend (no CORS issues)
     const response = await fetch(
@@ -84,6 +85,7 @@ exports.geocodeAddress = async (req, res) => {
     if (!response.ok) {
       throw new Error('OpenStreetMap service unavailable');
     }
+
     const data = await response.json();
     console.log('🌍 Geocoding API response:', data);
     if (data && data.display_name) {
@@ -114,15 +116,18 @@ exports.createServiceRequest = async (req, res) => {
     console.log("=== CREATE SERVICE REQUEST ===");
     const { serviceType, fuelType, quantity, problemDescription, vehicleType, userAddress, userPhone, latitude, longitude } = req.body;
     const user = req.user;
+
     if (!latitude || !longitude) {
       return res.status(400).json({
         success: false,
         error: "Location is required. Please get your location first."
       });
     }
+
     // Generate request ID manually
     const requestId = generateRequestId();
     console.log("🆔 Generated Request ID:", requestId);
+
     // Create service request
     const serviceRequest = new ServiceRequest({
       requestId: requestId,
@@ -138,14 +143,18 @@ exports.createServiceRequest = async (req, res) => {
         coordinates: [parseFloat(longitude), parseFloat(latitude)]
       }
     });
+
     console.log("📝 Service request created with ID:", requestId);
+
     // Use MongoDB geospatial query to find nearest providers
     const nearbyProviders = await findNearestProviders(
       parseFloat(longitude),
       parseFloat(latitude),
       serviceType
     );
+
     console.log(`📍 Found ${nearbyProviders.length} nearby providers within 20km`);
+
     // PRACTICAL LOGIC: Only calculate costs if providers are found
     let costEstimate = null;
     if (nearbyProviders.length > 0) {
@@ -172,15 +181,18 @@ exports.createServiceRequest = async (req, res) => {
     } else {
       console.log("❌ No providers found - skipping cost calculation");
     }
+
     serviceRequest.costEstimate = costEstimate || {
       fuelCost: 0,
       assistanceFee: 0,
       travelFee: 0,
       totalCost: 0
     };
+
     // Save the service request
     await serviceRequest.save();
     console.log("✅ Service request saved with ID:", serviceRequest._id);
+
     // Send SMS confirmation to user
     try {
       await smsService.sendRequestConfirmation(
@@ -193,6 +205,7 @@ exports.createServiceRequest = async (req, res) => {
       console.error('SMS sending failed:', smsError);
       // Don't fail the request if SMS fails
     }
+
     res.json({
       success: true,
       request: {
@@ -206,6 +219,7 @@ exports.createServiceRequest = async (req, res) => {
       nearestProviders: nearbyProviders,
       costEstimate: costEstimate
     });
+
   } catch (error) {
     console.error("❌ Create service request error:", error);
     console.error("Error details:", error.message);
@@ -247,6 +261,7 @@ exports.getProviderRequests = async (req, res) => {
         error: "Provider profile not found"
       });
     }
+
     // Get all pending requests (simplified without geospatial)
     const nearbyRequests = await ServiceRequest.find({
       serviceType: provider.businessType === 'fuel-station' ? 'fuel' : 'mechanic',
@@ -255,6 +270,7 @@ exports.getProviderRequests = async (req, res) => {
       .populate('user', 'name phone')
       .sort({ createdAt: -1 })
       .limit(10);
+
     // Get provider's accepted requests
     const myRequests = await ServiceRequest.find({
       assignedProvider: provider._id,
@@ -262,6 +278,7 @@ exports.getProviderRequests = async (req, res) => {
     })
       .populate('user', 'name phone')
       .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       provider,
@@ -282,7 +299,7 @@ exports.assignProviderToRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
     const provider = await ServiceProvider.findOne({ user: req.user._id });
-    
+   
     console.log('🔍 Assign provider called in serviceController:', {
       requestId,
       provider: provider ? provider.businessName : 'Not found',
@@ -326,6 +343,7 @@ exports.assignProviderToRequest = async (req, res) => {
     await serviceRequest.save();
 
     console.log(`✅ Request ${requestId} assigned to provider: ${provider.businessName}`);
+
     res.json({
       success: true,
       message: "Request accepted successfully",
@@ -352,16 +370,19 @@ exports.updateRequestStatus = async (req, res) => {
         error: "Provider profile not found"
       });
     }
+
     const serviceRequest = await ServiceRequest.findOne({
       requestId: requestId,
       assignedProvider: provider._id
     });
+
     if (!serviceRequest) {
       return res.status(404).json({
         success: false,
         error: "Request not found or not assigned to you"
       });
     }
+
     // Validate status progression
     const validStatuses = ['pending', 'accepted', 'en_route', 'service_started', 'completed', 'cancelled'];
     if (!validStatuses.includes(status)) {
@@ -370,6 +391,7 @@ exports.updateRequestStatus = async (req, res) => {
         error: "Invalid status"
       });
     }
+
     // Update status
     serviceRequest.status = status;
     // Add location update if provided
@@ -382,12 +404,16 @@ exports.updateRequestStatus = async (req, res) => {
         timestamp: new Date()
       });
     }
+
     // Set completion time if completed
     if (status === 'completed') {
       serviceRequest.completedAt = new Date();
     }
+
     await serviceRequest.save();
+
     console.log(`✅ Request ${requestId} status updated to: ${status}`);
+
     res.json({
       success: true,
       message: `Status updated to ${status}`,
@@ -408,15 +434,18 @@ exports.getRequestDetails = async (req, res) => {
     const { requestId } = req.params;
     const user = req.user;
     console.log(`🔍 Getting details for request ${requestId} by user ${user.email}`);
+
     const serviceRequest = await ServiceRequest.findOne({ requestId })
       .populate('user', 'name phone')
-      .populate('assignedProvider', 'businessName phone address location pricing user');
+       .populate('assignedProvider', 'businessName phone address location pricing user qrCode upiId acceptsQRPayments');
+
     if (!serviceRequest) {
       return res.status(404).json({
         success: false,
         error: "Request not found"
       });
     }
+
     // Allow access to:
     // 1. The user who created the request
     // 2. Any provider (to see nearby requests)
@@ -427,6 +456,7 @@ exports.getRequestDetails = async (req, res) => {
       serviceRequest.assignedProvider.user.toString() === user._id;
     const isProvider = user.role === 'fuel-station' || user.role === 'mechanic';
     const isAdmin = user.role === 'admin';
+
     if (!isOwner && !isAssignedProvider && !isProvider && !isAdmin) {
       console.log(`❌ Access denied for user ${user.email} to request ${requestId}`);
       return res.status(403).json({
@@ -434,7 +464,9 @@ exports.getRequestDetails = async (req, res) => {
         error: "Access denied - insufficient permissions"
       });
     }
+
     console.log(`✅ Access granted for user ${user.email} to request ${requestId}`);
+
     res.json({
       success: true,
       request: serviceRequest
@@ -453,11 +485,10 @@ exports.uploadProblemPhotos = async (req, res) => {
   try {
     const { requestId } = req.params;
     const captions = req.body.captions || [];
-
     console.log(`📸 Uploading photos for request: ${requestId}`);
 
     const serviceRequest = await ServiceRequest.findOne({ requestId });
-    
+   
     if (!serviceRequest) {
       return res.status(404).json({
         success: false,
@@ -473,9 +504,13 @@ exports.uploadProblemPhotos = async (req, res) => {
       });
     }
 
-    // Process uploaded photos
-    const photoUrls = req.files.map((file, index) => ({
-      url: `/uploads/problems/${file.filename}`,
+    // Upload to Cloudinary
+    const fileBuffers = req.files.map(file => file.buffer);
+    const uploadResults = await uploadProblemPhotosToCloudinary(fileBuffers, requestId);
+
+    const photoUrls = uploadResults.map((result, index) => ({
+      url: result.url,
+      publicId: result.publicId,
       caption: captions[index] || `Problem photo ${index + 1}`,
       uploadedAt: new Date()
     }));
@@ -484,7 +519,7 @@ exports.uploadProblemPhotos = async (req, res) => {
     serviceRequest.problemPhotos.push(...photoUrls);
     await serviceRequest.save();
 
-    console.log(`✅ ${photoUrls.length} photos uploaded for request ${requestId}`);
+    console.log(`✅ ${photoUrls.length} photos uploaded to Cloudinary for request ${requestId}`);
 
     res.json({
       success: true,
@@ -492,6 +527,7 @@ exports.uploadProblemPhotos = async (req, res) => {
       photos: photoUrls,
       requestId: requestId
     });
+
   } catch (error) {
     console.error("❌ Photo upload error:", error);
     res.status(500).json({
@@ -506,11 +542,10 @@ exports.updateProblemDiagnosis = async (req, res) => {
   try {
     const { requestId } = req.params;
     const { problemSeverity, diagnosticNotes } = req.body;
-
     console.log(`🔧 Updating diagnosis for request: ${requestId}`);
 
     const serviceRequest = await ServiceRequest.findOne({ requestId });
-    
+   
     if (!serviceRequest) {
       return res.status(404).json({
         success: false,
@@ -553,7 +588,6 @@ exports.updateProblemDiagnosis = async (req, res) => {
 exports.getProblemPhotos = async (req, res) => {
   try {
     const { requestId } = req.params;
-
     const serviceRequest = await ServiceRequest.findOne({ requestId })
       .select('problemPhotos problemSeverity diagnosticNotes serviceType');
 

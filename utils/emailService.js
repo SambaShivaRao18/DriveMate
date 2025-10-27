@@ -1,4 +1,8 @@
 const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+
+// Load environment variables
+dotenv.config();
 
 class EmailService {
   constructor() {

@@ -20,11 +20,11 @@
                             <%= error %>
                         </div>
                     <% } %>
-
-                    <form action="/provider/register" method="POST" id="providerRegisterForm">
+                    
+                    <form action="/provider/register" method="POST" id="providerRegisterForm" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="form-label">Business Name *</label>
-                            <input type="text" class="form-control" name="businessName" required 
+                            <input type="text" class="form-control" name="businessName" required
                                    placeholder="e.g., Shell Fuel Station, City Auto Repair">
                         </div>
 
@@ -42,12 +42,11 @@
                                 </ol>
                             </div>
                         </div>
-
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Latitude *</label>
-                                    <input type="number" step="0.000001" class="form-control" name="latitude" 
+                                    <input type="number" step="0.000001" class="form-control" name="latitude"
                                            placeholder="e.g., 17.4484" required>
                                     <div class="form-text">From Google Maps (first number)</div>
                                 </div>
@@ -55,30 +54,26 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Longitude *</label>
-                                    <input type="number" step="0.000001" class="form-control" name="longitude" 
+                                    <input type="number" step="0.000001" class="form-control" name="longitude"
                                            placeholder="e.g., 78.3819" required>
                                     <div class="form-text">From Google Maps (second number)</div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label">Business Address</label>
-                            <textarea class="form-control" name="address" rows="2" 
+                            <textarea class="form-control" name="address" rows="2"
                                       placeholder="Will be auto-filled from your coordinates (or enter manually)"></textarea>
                             <div class="form-text">Leave empty to auto-fill from coordinates</div>
                         </div>
-                        <!-- END COORDINATES SECTION -->
-
                         <div class="mb-3">
                             <label class="form-label">Phone Number *</label>
-                            <input type="tel" class="form-control" name="phone" 
+                            <input type="tel" class="form-control" name="phone"
                                    value="<%= user.phone %>" required>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label">Email *</label>
-                            <input type="email" class="form-control" name="email" 
+                            <input type="email" class="form-control" name="email"
                                    value="<%= user.email %>" required>
                         </div>
 
@@ -130,8 +125,8 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Assistance Fee (₹) *</label>
-                                    <input type="number" class="form-control" name="assistanceFee" 
-                                           value="<%= user.role === 'fuel-station' ? '100' : '150' %>" 
+                                    <input type="number" class="form-control" name="assistanceFee"
+                                           value="<%= user.role === 'fuel-station' ? '100' : '150' %>"
                                            min="50" max="1000" required>
                                     <div class="form-text">Base fee for providing assistance</div>
                                 </div>
@@ -139,7 +134,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Travel Fee per Km (₹) *</label>
-                                    <input type="number" class="form-control" name="travelFeePerKm" 
+                                    <input type="number" class="form-control" name="travelFeePerKm"
                                            value="10" min="5" max="50" required>
                                     <div class="form-text">Charged per km traveled to reach customer</div>
                                 </div>
@@ -166,6 +161,105 @@
                         </div>
                         <% } %>
 
+                        <!-- BUSINESS PHOTOS SECTION -->
+                        <% if (user.role === 'mechanic') { %>
+                        <div class="mb-3">
+                            <h6>🏢 Business Photos (Optional)</h6>
+                            <div class="alert alert-info">
+                                <small>Upload up to 3 photos of your workshop, tools, or previous work to build trust with customers</small>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <input type="file" class="form-control" name="businessPhotos" 
+                                       id="businessPhotos" multiple accept="image/*" 
+                                       onchange="previewBusinessPhotos(this)">
+                                <div class="form-text">Maximum 3 photos, 5MB each. Formats: JPG, PNG, WebP</div>
+                            </div>
+                            
+                            <div id="businessPhotosPreview" class="row mt-2"></div>
+                        </div>
+                        <% } else if (user.role === 'fuel-station') { %>
+                        <div class="mb-3">
+                            <h6>🏢 Business Photos (Optional)</h6>
+                            <div class="alert alert-info">
+                                <small>Upload photos of your fuel station, pumps, or facility to build trust with customers</small>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <input type="file" class="form-control" name="businessPhotos" 
+                                       id="businessPhotos" multiple accept="image/*" 
+                                       onchange="previewBusinessPhotos(this)">
+                                <div class="form-text">Maximum 3 photos, 5MB each. Formats: JPG, PNG, WebP</div>
+                            </div>
+                            
+                            <div id="businessPhotosPreview" class="row mt-2"></div>
+                        </div>
+                        <% } %>
+
+                        <!-- PAYMENT METHODS SECTION -->
+                        <div class="mb-3">
+                            <h6>💳 Payment Methods</h6>
+                            <div class="alert alert-info">
+                                <small>Select payment methods you want to accept from customers</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="paymentMethods" value="cash" checked disabled>
+                                        <label class="form-check-label">
+                                            💵 Cash (Always Available)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="paymentMethods" value="qr" id="qrPaymentCheckbox" checked>
+                                        <label class="form-check-label">
+                                            📱 QR Code Payments
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QR CODE PAYMENT SECTION -->
+                        <div class="mb-3" id="qrCodeSection">
+                            <h6>📱 QR Code Payment Setup</h6>
+                            <div class="alert alert-success">
+                                <small>
+                                    ✅ <strong>Free & Instant:</strong> Upload your UPI QR code.
+                                    Customers can scan and pay directly to you after service completion.
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Your UPI ID *</label>
+                                <input type="text" class="form-control" name="upiId" id="upiIdInput"
+                                       placeholder="e.g., yourname@ybl, yourname@paytm, yourname@okicici" required>
+                                <div class="form-text">This is where customers will send QR payments</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Upload UPI QR Code *</label>
+                                <input type="file" class="form-control" name="qrCode" id="qrCodeInput" accept="image/*" required>
+                                <div class="form-text">
+                                    <strong>How to get QR code:</strong><br>
+                                    1. Open your bank app (PhonePe, GPay, Paytm, etc.)<br>
+                                    2. Go to UPI/QR Code section<br>
+                                    3. Download or screenshot your QR code<br>
+                                    4. Upload it here
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <small>
+                                    💡 <strong>Tip:</strong> Make sure your QR code is clear and readable.
+                                    Test it by scanning with another phone before uploading.
+                                </small>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" required id="termsCheck">
@@ -190,3 +284,81 @@
 </div>
 
 <%- include('../partials/footer') %>
+<%- include('../partials/scripts') %>
+
+<script>
+// Toggle QR code section based on checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const qrCheckbox = document.getElementById('qrPaymentCheckbox');
+    const qrSection = document.getElementById('qrCodeSection');
+    const upiInput = document.getElementById('upiIdInput');
+    const qrInput = document.getElementById('qrCodeInput');
+    
+    function toggleQRSection() {
+        if (qrCheckbox.checked) {
+            qrSection.style.display = 'block';
+            upiInput.required = true;
+            qrInput.required = true;
+        } else {
+            qrSection.style.display = 'none';
+            upiInput.required = false;
+            qrInput.required = false;
+        }
+    }
+    
+    // Initial state
+    toggleQRSection();
+    
+    // Add event listener
+    qrCheckbox.addEventListener('change', toggleQRSection);
+});
+
+// Preview business photos for registration
+function previewBusinessPhotos(input) {
+    const preview = document.getElementById('businessPhotosPreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files.length > 0) {
+        const files = Array.from(input.files).slice(0, 3); // Limit to 3 files
+        
+        files.forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-4 mb-2';
+                    col.innerHTML = `
+                        <div class="photo-preview-card">
+                            <img src="${e.target.result}" class="img-thumbnail business-photo-preview w-100">
+                            <small class="d-block text-center mt-1">Photo ${index + 1}</small>
+                        </div>
+                    `;
+                    preview.appendChild(col);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        if (files.length > 0) {
+            // Show alert using existing function
+            if (typeof showAlert === 'function') {
+                showAlert(`✅ ${files.length} business photo(s) selected`, 'info');
+            } else {
+                alert(`✅ ${files.length} business photo(s) selected`);
+            }
+        }
+    }
+}
+</script>
+
+<style>
+.business-photo-preview {
+    max-height: 150px;
+    object-fit: cover;
+}
+.photo-preview-card {
+    position: relative;
+}
+</style>

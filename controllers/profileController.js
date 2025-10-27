@@ -2,6 +2,8 @@ const User = require("../models/User");
 const ServiceProvider = require("../models/ServiceProvider");
 const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
+const { uploadQRToCloudinary, deleteQRFromCloudinary } = require('../config/upload');
+
 
 // Helper function for status badge classes
 function getStatusBadgeClass(status) {
@@ -220,6 +222,58 @@ exports.updateProviderProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Error updating provider profile"
+    });
+  }
+};
+
+// @desc   Update provider QR code
+exports.updateProviderQRCode = async (req, res) => {
+  try {
+    const user = req.user;
+    const provider = await ServiceProvider.findOne({ user: user._id });
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        error: "Provider profile not found"
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: "QR code image is required"
+      });
+    }
+
+    // Delete old QR code from Cloudinary if exists
+    if (provider.qrCode && provider.qrCode.publicId) {
+      await deleteQRFromCloudinary(provider.qrCode.publicId);
+    }
+
+    // Upload new QR code to Cloudinary
+    const uploadResult = await uploadQRToCloudinary(req.file.buffer, user._id);
+
+    // Update provider with new QR code
+    provider.qrCode = {
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+      uploadedAt: new Date()
+    };
+
+    await provider.save();
+
+    res.json({
+      success: true,
+      message: "QR code updated successfully",
+      qrCode: provider.qrCode
+    });
+
+  } catch (error) {
+    console.error("Update QR code error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error updating QR code"
     });
   }
 };
