@@ -3,6 +3,7 @@ let currentServiceData = {
     fuel: null,
     mechanic: null
 };
+let excludedProviders = [];
 
 // Geocode coordinates to address using backend proxy (avoids CORS)
 async function geocodeCoordinates(latitude, longitude) {
@@ -204,26 +205,54 @@ async function calculateFuelCost() {
     }
 }
 
-// Display Fuel Results
+// Display Fuel Results with enhanced provider cards
 function displayFuelResults(data) {
     const resultsDiv = document.getElementById('fuelResults');
     const stationsList = document.getElementById('fuelStationsList');
     const costDiv = document.getElementById('fuelCostBreakdown');
+
+    // Reset excluded providers when new results are shown
+    excludedProviders = [];
+
     // Display nearby stations
     if (data.nearestProviders && data.nearestProviders.length > 0) {
         let stationsHTML = '<div class="row">';
-        data.nearestProviders.slice(0, 3).forEach((provider, index) => {
+        
+        data.nearestProviders.forEach((provider, index) => {
+            const hasPhotos = provider.businessPhotos && provider.businessPhotos.length > 0;
+            const photoCount = hasPhotos ? provider.businessPhotos.length : 0;
+            
             stationsHTML += `
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 border-primary">
+                <div class="col-md-6 mb-3" id="provider-${provider._id}">
+                    <div class="card h-100 border-primary provider-card">
                         <div class="card-body">
-                            <h6 class="card-title text-primary">${provider.businessName}</h6>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="card-title text-primary">${provider.businessName}</h6>
+                                <button class="btn btn-outline-danger btn-sm" onclick="excludeProvider('${provider._id}')" title="Remove this provider">
+                                    ❌
+                                </button>
+                            </div>
                             <p class="card-text small mb-1">
                                 <strong>Phone:</strong> ${provider.phone}<br>
                                 <strong>Address:</strong> ${provider.address}<br>
+                                <strong>Distance:</strong> ${provider.distance} km<br>
                                 <strong>Rating:</strong> ⭐ ${provider.rating.toFixed(1)} (${provider.totalRatings} reviews)
                             </p>
-                            <p class="card-text mb-0 small text-success">
+                            
+                            <!-- Business Photos Section -->
+                            ${hasPhotos ? `
+                                <div class="business-photos-section mt-2">
+                                    <button class="btn btn-outline-info btn-sm w-100" onclick="viewBusinessPhotos('${provider._id}')">
+                                        📸 View Business Photos (${photoCount})
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="text-muted small mt-2">
+                                    No business photos available
+                                </div>
+                            `}
+                            
+                            <p class="card-text mb-0 small text-success mt-2">
                                 <strong>Assistance Fee:</strong> ₹${provider.pricing.assistanceFee}
                             </p>
                         </div>
@@ -231,6 +260,7 @@ function displayFuelResults(data) {
                 </div>
             `;
         });
+
         stationsHTML += '</div>';
         stationsList.innerHTML = stationsHTML;
     } else {
@@ -265,7 +295,15 @@ function displayFuelResults(data) {
                 <div class="col-6 text-end text-success">₹${cost.totalCost}</div>
             </div>
             <p class="small text-muted mt-2">* This is an estimate. Final cost may vary slightly.</p>
+            
+            <!-- Excluded Providers Info -->
+            <div id="excludedProvidersInfo" class="mt-3" style="display: none;">
+                <div class="alert alert-info">
+                    <small>📝 Some providers have been excluded from your search.</small>
+                </div>
+            </div>
         `;
+
         // Show submit button only when providers are available
         document.getElementById('submitFuelBtn').style.display = 'block';
     } else {
@@ -279,10 +317,12 @@ function displayFuelResults(data) {
         // Hide submit button when no providers
         document.getElementById('submitFuelBtn').style.display = 'none';
     }
+
     resultsDiv.style.display = 'block';
     // Scroll to results
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
+
 
 // Submit Fuel Request
 async function submitFuelRequest() {
@@ -372,27 +412,55 @@ async function calculateMechanicCost() {
     }
 }
 
-// Display Mechanic Results
+// Display Mechanic Results with enhanced provider cards
 function displayMechanicResults(data) {
     const resultsDiv = document.getElementById('mechanicResults');
     const mechanicsList = document.getElementById('mechanicsList');
     const costDiv = document.getElementById('mechanicCostBreakdown');
+
+    // Reset excluded providers when new results are shown
+    excludedProviders = [];
+
     // Display nearby mechanics
     if (data.nearestProviders && data.nearestProviders.length > 0) {
         let mechanicsHTML = '<div class="row">';
-        data.nearestProviders.slice(0, 3).forEach((provider, index) => {
+        
+        data.nearestProviders.forEach((provider, index) => {
+            const hasPhotos = provider.businessPhotos && provider.businessPhotos.length > 0;
+            const photoCount = hasPhotos ? provider.businessPhotos.length : 0;
+            
             mechanicsHTML += `
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100 border-warning">
+                <div class="col-md-6 mb-3" id="provider-${provider._id}">
+                    <div class="card h-100 border-warning provider-card">
                         <div class="card-body">
-                            <h6 class="card-title text-warning">${provider.businessName}</h6>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="card-title text-warning">${provider.businessName}</h6>
+                                <button class="btn btn-outline-danger btn-sm" onclick="excludeProvider('${provider._id}')" title="Remove this provider">
+                                    ❌
+                                </button>
+                            </div>
                             <p class="card-text small mb-1">
                                 <strong>Phone:</strong> ${provider.phone}<br>
                                 <strong>Address:</strong> ${provider.address}<br>
-                                <strong>Services:</strong> ${provider.services.slice(0, 3).join(', ')}<br>
+                                <strong>Distance:</strong> ${provider.distance} km<br>
+                                <strong>Services:</strong> ${provider.services ? provider.services.slice(0, 3).join(', ') : 'General repairs'}<br>
                                 <strong>Rating:</strong> ⭐ ${provider.rating.toFixed(1)} (${provider.totalRatings} reviews)
                             </p>
-                            <p class="card-text mb-0 small text-success">
+                            
+                            <!-- Business Photos Section -->
+                            ${hasPhotos ? `
+                                <div class="business-photos-section mt-2">
+                                    <button class="btn btn-outline-info btn-sm w-100" onclick="viewBusinessPhotos('${provider._id}')">
+                                        📸 View Business Photos (${photoCount})
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="text-muted small mt-2">
+                                    No business photos available
+                                </div>
+                            `}
+                            
+                            <p class="card-text mb-0 small text-success mt-2">
                                 <strong>Assistance Fee:</strong> ₹${provider.pricing.assistanceFee}
                             </p>
                         </div>
@@ -400,6 +468,7 @@ function displayMechanicResults(data) {
                 </div>
             `;
         });
+
         mechanicsHTML += '</div>';
         mechanicsList.innerHTML = mechanicsHTML;
     } else {
@@ -430,7 +499,15 @@ function displayMechanicResults(data) {
                 <div class="col-6 text-end text-success">₹${cost.totalCost}</div>
             </div>
             <p class="small text-muted mt-2">* Final cost may vary based on actual repairs needed</p>
+            
+            <!-- Excluded Providers Info -->
+            <div id="excludedProvidersInfo" class="mt-3" style="display: none;">
+                <div class="alert alert-info">
+                    <small>📝 Some providers have been excluded from your search.</small>
+                </div>
+            </div>
         `;
+
         // Show submit button only when mechanics are available
         document.getElementById('submitMechBtn').style.display = 'block';
     } else {
@@ -444,6 +521,7 @@ function displayMechanicResults(data) {
         // Hide submit button when no mechanics
         document.getElementById('submitMechBtn').style.display = 'none';
     }
+
     resultsDiv.style.display = 'block';
     // Scroll to results
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
@@ -1104,4 +1182,167 @@ async function debugProviderData(requestId) {
     } catch (error) {
         console.error('🔍 DEBUG - Error:', error);
     }
+}
+
+// Exclude a provider from the list
+function excludeProvider(providerId) {
+    // Add to excluded providers list
+    if (!excludedProviders.includes(providerId)) {
+        excludedProviders.push(providerId);
+    }
+    
+    // Hide the provider card with animation
+    const providerCard = document.getElementById(`provider-${providerId}`);
+    if (providerCard) {
+        providerCard.style.transition = 'all 0.3s ease';
+        providerCard.style.opacity = '0';
+        providerCard.style.height = '0';
+        providerCard.style.margin = '0';
+        providerCard.style.padding = '0';
+        providerCard.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            providerCard.style.display = 'none';
+        }, 300);
+    }
+    
+    // Show excluded providers info
+    const excludedInfo = document.getElementById('excludedProvidersInfo');
+    if (excludedInfo) {
+        excludedInfo.style.display = 'block';
+    }
+    
+    showAlert('Provider removed from your search results', 'info');
+}
+
+// View business photos for a provider
+function viewBusinessPhotos(providerId) {
+    // Find the provider data from current service data
+    let provider = null;
+    let serviceType = null;
+    
+    if (currentServiceData.fuel && currentServiceData.fuel.nearestProviders) {
+        provider = currentServiceData.fuel.nearestProviders.find(p => p._id === providerId);
+        serviceType = 'fuel';
+    }
+    
+    if (!provider && currentServiceData.mechanic && currentServiceData.mechanic.nearestProviders) {
+        provider = currentServiceData.mechanic.nearestProviders.find(p => p._id === providerId);
+        serviceType = 'mechanic';
+    }
+    
+    if (!provider) {
+        showAlert('Provider data not found', 'warning');
+        return;
+    }
+    
+    // Create and show business photos modal
+    showBusinessPhotosModal(provider, serviceType);
+}
+
+// Show business photos modal
+function showBusinessPhotosModal(provider, serviceType) {
+    const photos = provider.businessPhotos || [];
+    const hasPhotos = photos.length > 0;
+    
+    let photosHTML = '';
+    
+    if (hasPhotos) {
+        photosHTML = `
+            <div class="row">
+                ${photos.map((photo, index) => `
+                    <div class="col-12 col-md-6 mb-3">
+                        <div class="card">
+                            <img src="${photo.url}" class="card-img-top business-photo-modal" 
+                                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                                 onclick="openFullSizePhoto('${photo.url}', '${photo.caption || `Business Photo ${index + 1}`}')"
+                                 alt="${photo.caption || `Business Photo ${index + 1}`}">
+                            <div class="card-body p-2">
+                                <small class="text-muted">${photo.caption || `Business Photo ${index + 1}`}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        photosHTML = `
+            <div class="text-center py-4">
+                <p class="text-muted">No business photos available for this provider.</p>
+            </div>
+        `;
+    }
+    
+    const modalHTML = `
+        <div class="modal fade" id="businessPhotosModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">🏢 ${provider.businessName} - Business Photos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="provider-info mb-3 p-3 bg-light rounded">
+                            <p class="mb-1"><strong>Business:</strong> ${provider.businessName}</p>
+                            <p class="mb-1"><strong>Type:</strong> ${serviceType === 'fuel' ? '⛽ Fuel Station' : '🔧 Mechanic'}</p>
+                            <p class="mb-1"><strong>Rating:</strong> ⭐ ${provider.rating.toFixed(1)} (${provider.totalRatings} reviews)</p>
+                            <p class="mb-0"><strong>Address:</strong> ${provider.address}</p>
+                        </div>
+                        ${photosHTML}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-outline-danger" onclick="excludeProvider('${provider._id}'); bootstrap.Modal.getInstance(document.getElementById('businessPhotosModal')).hide();">
+                            ❌ Remove This Provider
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('businessPhotosModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const businessPhotosModal = new bootstrap.Modal(document.getElementById('businessPhotosModal'));
+    businessPhotosModal.show();
+}
+
+// Open full-size photo view
+function openFullSizePhoto(photoUrl, caption) {
+    const fullSizeModalHTML = `
+        <div class="modal fade" id="fullSizePhotoModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title">${caption}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${photoUrl}" class="img-fluid" style="max-height: 80vh;" alt="${caption}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('fullSizePhotoModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', fullSizeModalHTML);
+    
+    // Show modal
+    const fullSizeModal = new bootstrap.Modal(document.getElementById('fullSizePhotoModal'));
+    fullSizeModal.show();
 }

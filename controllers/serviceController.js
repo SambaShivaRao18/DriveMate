@@ -45,7 +45,9 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
       }
     })
       .populate('user', 'name phone')
+      .select('+businessPhotos') // ADD THIS LINE to include businessPhotos
       .limit(5);
+    
     console.log(`📍 MongoDB geospatial query found ${providers.length} ${serviceType} providers`);
 
     // Calculate actual distances for display
@@ -56,7 +58,13 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
         provider.location.coordinates[1],
         provider.location.coordinates[0]
       );
-      return { ...provider.toObject(), distance: Math.round(distance * 10) / 10 };
+      
+      // Include businessPhotos in the returned data
+      return { 
+        ...provider.toObject(), 
+        distance: Math.round(distance * 10) / 10,
+        businessPhotos: provider.businessPhotos || [] // Ensure businessPhotos is included
+      };
     });
 
     return providersWithDistance;
