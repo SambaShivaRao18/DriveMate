@@ -110,20 +110,30 @@ exports.registerProvider = async (req, res) => {
     const acceptsQRPayments = paymentMethodsArray.includes('qr');
 
     // Validate QR payment requirements
-    if (acceptsQRPayments) {
-      if (!upiId) {
-        return res.status(400).render('pages/provider-register', {
-          user: req.user,
-          error: "UPI ID is required when QR payments are enabled"
-        });
-      }
-      if (!req.file) {
-        return res.status(400).render('pages/provider-register', {
-          user: req.user,
-          error: "QR code image is required when QR payments are enabled"
-        });
-      }
-    }
+if (acceptsQRPayments) {
+  if (!upiId) {
+    return res.status(400).render('pages/provider-register', {
+      user: req.user,
+      error: "UPI ID is required when QR payments are enabled"
+    });
+  }
+  
+  // ✅ CORRECTED: Check for QR code in req.files array
+  const qrCodeFile = req.files ? req.files.find(file => file.fieldname === 'qrCode') : null;
+  if (!qrCodeFile) {
+    return res.status(400).render('pages/provider-register', {
+      user: req.user,
+      error: "QR code image is required when QR payments are enabled"
+    });
+  }
+}
+
+// DEBUG: Log received files
+console.log('🔍 DEBUG - Registration files received:', req.files ? req.files.map(f => ({
+  fieldname: f.fieldname,
+  originalname: f.originalname,
+  size: f.size
+})) : 'No files');
 
     const providerData = {
       user: user._id,
@@ -147,23 +157,25 @@ exports.registerProvider = async (req, res) => {
     };
 
     // Handle QR code upload if provided
-    if (req.file && acceptsQRPayments) {
-      try {
-        const uploadResult = await uploadQRToCloudinary(req.file.buffer, user._id);
-        providerData.qrCode = {
-          url: uploadResult.secure_url,
-          publicId: uploadResult.public_id,
-          uploadedAt: new Date()
-        };
-        console.log('✅ QR code uploaded to Cloudinary:', uploadResult.secure_url);
-      } catch (uploadError) {
-        console.error('❌ Cloudinary upload failed:', uploadError);
-        return res.status(400).render('pages/provider-register', {
-          user: req.user,
-          error: "QR code upload failed. Please try again."
-        });
-      }
-    }
+    // Handle QR code upload if provided
+const qrCodeFile = req.files ? req.files.find(file => file.fieldname === 'qrCode') : null;
+if (qrCodeFile && acceptsQRPayments) { // ✅ CORRECTED
+  try {
+    const uploadResult = await uploadQRToCloudinary(qrCodeFile.buffer, user._id);
+    providerData.qrCode = {
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+      uploadedAt: new Date()
+    };
+    console.log('✅ QR code uploaded to Cloudinary:', uploadResult.secure_url);
+  } catch (uploadError) {
+    console.error('❌ Cloudinary upload failed:', uploadError);
+    return res.status(400).render('pages/provider-register', {
+      user: req.user,
+      error: "QR code upload failed. Please try again."
+    });
+  }
+}
 
     // Handle business photos upload if provided
     if (req.files && req.files.businessPhotos && req.files.businessPhotos.length > 0) {
