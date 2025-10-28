@@ -34,4 +34,5 @@ Thumbs.db
 
 # Uploaded files
 /public/uploads/*
-!/public/uploads/.gitkeep
+!/public/uploads/.gitkeep.env
+.env.*
