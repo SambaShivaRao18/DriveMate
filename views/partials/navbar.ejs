@@ -1,50 +1,71 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
-        <!-- Brand with your logo -->
+        <!-- Brand Logo and Name -->
         <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-            <img src="/images/icon.png" alt="DriveMate Logo" height="40" class="me-2">
-            <span>DriveMate <small class="text-warning">RoadSide Assistance</small></span>
+            <img src="/images/Logo2.png" alt="DriveMate Logo" height="40" class="me-2 rounded">
+            <div class="d-flex flex-column">
+                <span class="fw-bold fs-5">DriveMate</span>
+                <small class="text-warning opacity-75" style="font-size: 0.7rem; line-height: 1;">RoadSide Assistance</small>
+            </div>
         </a>
 
-        <!-- Mobile Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <!-- Mobile Navigation -->
+        <div class="d-lg-none">
+            <% if (!user) { %>
+                <!-- Show Login button on mobile for all pages except login/register -->
+                <a href="/auth/login" class="btn btn-outline-light btn-sm mobile-login-btn">Login</a>
+            <% } else { %>
+                <!-- Toggle button for logged-in users -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            <% } %>
+        </div>
 
-        <!-- Navigation Links -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/">Home</a>
-                </li>
-                
-                <% if (user) { %>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/dashboard">Dashboard</a>
-                    </li>
-                    
-                    <% if (user.role === 'fuel-station' || user.role === 'mechanic') { %>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/provider/dashboard">Provider Dashboard</a>
-                        </li>
-                    <% } %>
-                <% } %>
-            </ul>
-
+        <!-- Desktop Navigation -->
+        <div class="collapse navbar-collapse d-lg-block" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <% if (user) { %>
+                    <!-- User dropdown for desktop -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <%= user.name %>
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" 
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="d-flex flex-column text-end me-2">
+                                <span class="fw-bold"><%= user.name %></span>
+                            </div>
+                            <i class="fas fa-user-circle fs-5"></i>
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/auth/profile">Profile</a></li>
-                            <li><a class="dropdown-item text-danger" href="/auth/logout">Logout</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="/auth/profile">
+                                <i class="fas fa-user me-2"></i>My Profile
+                            </a></li>
+                            <li><a class="dropdown-item" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a></li>
+                            
+                            <!-- Provider Specific Dropdown Items -->
+                            <% if (user.role === 'fuel-station' || user.role === 'mechanic') { %>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/provider/dashboard">
+                                    <i class="fas fa-briefcase me-2"></i>Provider Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="/provider/edit-profile">
+                                    <i class="fas fa-edit me-2"></i>Edit Business Profile
+                                </a></li>
+                            <% } %>
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="/auth/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a></li>
                         </ul>
                     </li>
                 <% } else { %>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/auth/login">Login</a>
+                    <!-- Desktop Login for non-authenticated users -->
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="nav-link" href="/auth/login">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login
+                        </a>
                     </li>
                 <% } %>
             </ul>
@@ -52,5 +73,15 @@
     </div>
 </nav>
 
-<!-- Alert Container -->
-<div id="alertContainer" class="container mt-3"></div>
+<script>
+// Hide mobile login button on login/register pages
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    const mobileLoginBtn = document.querySelector('.mobile-login-btn');
+    
+    // Hide login button if we're already on login/register pages
+    if (mobileLoginBtn && (currentPath === '/auth/login' || currentPath === '/auth/register')) {
+        mobileLoginBtn.style.display = 'none';
+    }
+});
+</script>

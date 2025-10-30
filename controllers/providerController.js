@@ -95,12 +95,12 @@ exports.registerProvider = async (req, res) => {
     const lng = parseFloat(longitude);
     
     // Validate coordinate ranges (Hyderabad area roughly)
-    if (lat < 17.3 || lat > 17.6 || lng < 78.3 || lng > 78.5) {
-      return res.status(400).render('pages/provider-register', {
-        user: req.user,
-        error: "Coordinates appear to be outside Hyderabad area. Please check and try again."
-      });
-    }
+    // if (lat < 17.3 || lat > 17.6 || lng < 78.3 || lng > 78.5) {
+    //   return res.status(400).render('pages/provider-register', {
+    //     user: req.user,
+    //     error: "Coordinates appear to be outside Hyderabad area. Please check and try again."
+    //   });
+    // }
 
     // Get accurate address from coordinates
     let businessAddress = address;

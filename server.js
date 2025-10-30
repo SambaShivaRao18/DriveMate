@@ -34,6 +34,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(methodOverride('_method'));
 
+app.use((req, res, next) => {
+  // Prevent caching for ALL responses
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Static folder
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -92,6 +100,7 @@ app.get("/", (req, res) => {
   res.render('pages/home', { 
     title: 'Roadside Assistance',
     user: req.user || null
+    //  currentPath: '/'
   });
 });
 

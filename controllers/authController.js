@@ -81,9 +81,22 @@ exports.loginUser = async (req, res) => {
 
 // @desc   Logout user
 exports.logoutUser = (req, res) => {
-  res.clearCookie("token");
+  // SET CACHE HEADERS FIRST
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  // Clear the token cookie
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+  
   console.log("User logged out");
-  res.redirect('/');
+  
+  // Force redirect with cache buster
+  res.redirect('/?logout=' + Date.now());
 };
 
 // @desc   Show login page

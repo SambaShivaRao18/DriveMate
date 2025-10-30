@@ -3,16 +3,16 @@ const User = require('../models/User');
 
 const protect = async (req, res, next) => {
   try {
+    // SET CACHE HEADERS FIRST - BEFORE ANYTHING ELSE
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     let token;
 
     // Check for token in cookies
     if (req.cookies.token) {
       token = req.cookies.token;
-    }
-
-    // Check for token in authorization header (fallback)
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
@@ -29,15 +29,19 @@ const protect = async (req, res, next) => {
       
       if (!req.user) {
         console.log('User not found for token');
+        res.clearCookie("token");
         return res.redirect('/auth/login');
       }
 
       console.log('User authenticated:', req.user.email);
       next();
+      
     } catch (error) {
       console.error('Token verification failed:', error.message);
+      res.clearCookie("token");
       return res.redirect('/auth/login');
     }
+    
   } catch (error) {
     console.error('Auth middleware error:', error);
     res.redirect('/auth/login');

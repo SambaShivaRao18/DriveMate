@@ -1,3 +1,13 @@
+// Nuclear option for back button issue
+if (performance.navigation.type === 2) {
+  // Page was loaded via back/forward button
+  location.reload(true); // Force reload from server
+}
+
+// Clear any cached data on page load
+sessionStorage.clear();
+localStorage.clear();
+
 // Global variables to store data
 let currentServiceData = {
     fuel: null,
