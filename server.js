@@ -10,6 +10,7 @@ const providerRoutes = require("./routes/providerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const path = require('path');
 
+
 // Import the required middleware and controller
 const { protect } = require("./middleware/authMiddleware");
 const { showDashboard } = require("./controllers/authController");

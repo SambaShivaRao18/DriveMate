@@ -18,6 +18,8 @@ const { protect } = require("../middleware/authMiddleware");
 // PAGE ROUTES (GET)
 // ======================
 
+router.get("/register", showRegister);  // This creates: /auth/register
+
 // @route   GET /auth/login
 // @desc    Show login page
 router.get("/login", showLogin);
