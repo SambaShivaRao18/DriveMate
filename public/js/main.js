@@ -5,11 +5,11 @@ let currentServiceData = {
 };
 let excludedProviders = [];
 
-// Geocode coordinates to address using backend proxy (avoids CORS)
+// In main.js
 async function geocodeCoordinates(latitude, longitude) {
     try {
-        console.log(`📍 Geocoding coordinates: ${latitude}, ${longitude}`);
-        // Call our backend proxy instead of direct OpenStreetMap API
+        console.log(`📍 Mapbox Geocoding coordinates: ${latitude}, ${longitude}`);
+        
         const response = await fetch('/api/services/geocode', {
             method: 'POST',
             headers: {
@@ -17,18 +17,21 @@ async function geocodeCoordinates(latitude, longitude) {
             },
             body: JSON.stringify({ latitude, longitude })
         });
+
         if (!response.ok) {
             throw new Error('Geocoding service unavailable');
         }
+
         const data = await response.json();
+        
         if (data.success && data.address) {
-            console.log('✅ Geocoding successful:', data.address);
+            console.log('✅ Mapbox geocoding successful:', data.address);
             return data.address;
         } else {
             throw new Error(data.error || 'Could not determine address');
         }
     } catch (error) {
-        console.error('❌ Geocoding error:', error);
+        console.error('❌ Mapbox geocoding error:', error);
         // Fallback: return coordinates-based address
         return `Near ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     }

@@ -74,10 +74,11 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
   }
 };
 
-// @desc   Geocode coordinates to address
+// In serviceController.js - Update the geocodeAddress function
 exports.geocodeAddress = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
+    
     if (!latitude || !longitude) {
       return res.status(400).json({
         success: false,
@@ -85,29 +86,34 @@ exports.geocodeAddress = async (req, res) => {
       });
     }
 
-    console.log(`🌍 Geocoding request: ${latitude}, ${longitude}`);
-    // Use OpenStreetMap Nominatim API through backend (no CORS issues)
+    console.log(`🌍 Mapbox Geocoding request: ${latitude}, ${longitude}`);
+    
+    // Use Mapbox Geocoding API
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${process.env.MAPBOX_ACCESS_TOKEN}&types=address,place,poi&limit=1`
     );
+
     if (!response.ok) {
-      throw new Error('OpenStreetMap service unavailable');
+      throw new Error('Mapbox service unavailable');
     }
 
     const data = await response.json();
-    console.log('🌍 Geocoding API response:', data);
-    if (data && data.display_name) {
-      console.log('✅ Geocoding successful:', data.display_name);
+    
+    if (data.features && data.features.length > 0) {
+      const address = data.features[0].place_name;
+      console.log('✅ Mapbox geocoding successful:', address);
+      
       return res.json({
         success: true,
-        address: data.display_name,
+        address: address,
         coordinates: { latitude, longitude }
       });
     } else {
       throw new Error('No address found for these coordinates');
     }
+
   } catch (error) {
-    console.error('Geocoding API error:', error);
+    console.error('Mapbox geocoding API error:', error);
     // Fallback to coordinates
     return res.json({
       success: true,
@@ -117,7 +123,6 @@ exports.geocodeAddress = async (req, res) => {
     });
   }
 };
-
 // @desc   Create new service request
 exports.createServiceRequest = async (req, res) => {
   try {

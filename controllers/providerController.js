@@ -4,27 +4,30 @@ const smsService = require("../utils/smsService");
 const fetch = require('node-fetch');
 const { qrUpload, uploadQRToCloudinary, uploadBusinessPhotosToCloudinary, deleteFromCloudinary } = require('../config/upload');
 
-// Reverse geocode coordinates to address
+// In providerController.js
 async function reverseGeocode(latitude, longitude) {
     try {
-        console.log(`📍 Reverse geocoding: ${latitude}, ${longitude}`);
+        console.log(`📍 Mapbox Reverse geocoding: ${latitude}, ${longitude}`);
+        
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${process.env.MAPBOX_ACCESS_TOKEN}&types=address,place,poi&limit=1`
         );
 
         if (!response.ok) {
-            throw new Error('Reverse geocoding service unavailable');
+            throw new Error('Mapbox reverse geocoding service unavailable');
         }
 
         const data = await response.json();
-        if (data && data.display_name) {
-            console.log('✅ Reverse geocoding successful:', data.display_name);
-            return data.display_name;
+        
+        if (data.features && data.features.length > 0) {
+            const address = data.features[0].place_name;
+            console.log('✅ Mapbox reverse geocoding successful:', address);
+            return address;
         } else {
             throw new Error('Could not determine address from coordinates');
         }
     } catch (error) {
-        console.error('❌ Reverse geocoding error:', error);
+        console.error('❌ Mapbox reverse geocoding error:', error);
         // Fallback: return coordinates-based address
         return `Near ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     }
