@@ -1,125 +1,56 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const dotenv = require('dotenv');
 
-// Load environment variables
 dotenv.config();
 
 class EmailService {
   constructor() {
-    this.transporter = null;
-    this.initializeTransporter();
-  }
-
-  initializeTransporter() {
-    // Only create transporter if email credentials are provided
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      this.transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        },
-        // Better timeout settings for Render
-        connectionTimeout: 10000, // 10 seconds
-        socketTimeout: 15000, // 15 seconds
-        greetingTimeout: 10000,
-        // Retry logic
-        maxConnections: 5,
-        maxMessages: 100
-      });
-
-      // Verify connection on startup
-      this.verifyConnection();
+    this.apiKey = process.env.SENDGRID_API_KEY;
+    this.fromEmail = process.env.EMAIL_FROM || 'noreply@drivemate.com';
+    
+    if (this.apiKey) {
+      sgMail.setApiKey(this.apiKey);
+      console.log('✅ SendGrid email service initialized and ready!');
     } else {
-      console.log('📧 Email service running in DEMO mode - no email credentials provided');
+      console.log('📧 Email service in DEMO mode - Add SENDGRID_API_KEY to .env');
     }
   }
 
-  async verifyConnection() {
-    if (!this.transporter) return;
-
-    try {
-      await this.transporter.verify();
-      console.log('✅ Email transporter verified and ready');
-    } catch (error) {
-      console.error('❌ Email transporter verification failed:', error.message);
-      this.transporter = null; // Disable transporter on failure
-    }
-  }
-
-  // Robust email sending with multiple fallbacks
   async sendEmail(to, subject, html) {
     try {
-      // Always log the email attempt
       console.log(`📧 Attempting to send email to: ${to}`);
       console.log(`📧 Subject: ${subject}`);
-
-      // If no transporter (no credentials or verification failed), use demo mode
-      if (!this.transporter) {
-        console.log('📧 DEMO MODE - Email logged but not sent (no transporter)');
-        this.logEmailForManualSending(to, subject, html);
-        return true; // Return true to indicate "success" in demo mode
+      
+      // Demo mode fallback
+      if (!this.apiKey) {
+        console.log('📧 DEMO MODE - Email would be sent to:', to);
+        console.log('📧 Email content:', html.substring(0, 200) + '...');
+        return true;
       }
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER || 'noreply@drivemate.com',
+      const msg = {
         to: to,
+        from: this.fromEmail,
         subject: subject,
         html: html,
-        // Important headers for better delivery
-        headers: {
-          'X-Priority': '3',
-          'X-MSMail-Priority': 'Normal'
-        }
       };
 
-      // Attempt to send with timeout
-      const sendPromise = this.transporter.sendMail(mailOptions);
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Email sending timeout')), 15000);
-      });
-
-      await Promise.race([sendPromise, timeoutPromise]);
-      
-      console.log(`✅ Email sent successfully to: ${to}`);
+      const response = await sgMail.send(msg);
+      console.log(`✅ EMAIL SENT SUCCESSFULLY to: ${to}`);
+      console.log(`✅ SendGrid Response:`, response[0].statusCode);
       return true;
 
     } catch (error) {
-      console.error('❌ Email sending failed:', error.message);
-      
-      // Fallback: Log email for manual sending
-      this.logEmailForManualSending(to, subject, html);
-      
-      // Don't throw error - fail gracefully
+      console.error('❌ SendGrid email failed:', error.response?.body || error.message);
       return false;
     }
   }
 
-  // Log emails that couldn't be sent (for manual follow-up)
-  logEmailForManualSending(to, subject, html) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      to: to,
-      subject: subject,
-      html: html,
-      status: 'PENDING_MANUAL_SEND'
-    };
-    
-    console.log('📧 EMAIL PENDING MANUAL SENDING:');
-    console.log('   To:', to);
-    console.log('   Subject:', subject);
-    console.log('   Time:', logEntry.timestamp);
-    console.log('   ---');
-    
-    // In production, you could save this to a database for manual processing
-    // For now, we just log it clearly
-  }
-
   // 1. Send welcome email to newly registered users
   async sendWelcomeEmail(userEmail, userName) {
-    const subject = `Welcome to DriveMate - Your Roadside Assistance Partner`;
+    const subject = `Welcome to DriveMate 🚗 - Your Roadside Assistance Partner`;
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1 style="color: #3366cc; margin-bottom: 10px;">🚗 DriveMate</h1>
           <p style="color: #666; font-size: 16px;">Roadside Assistance Reimagined</p>
@@ -150,29 +81,26 @@ class EmailService {
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://drivemateweb.onrender.com/dashboard" 
              style="background: #3366cc; color: white; padding: 12px 30px; 
-                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    text-decoration: none; border-radius: 5px; font-weight: bold;
+                    display: inline-block;">
             Get Started Now
           </a>
         </div>
         
-        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          This is an automated message. Email delivery: ${this.transporter ? 'ACTIVE' : 'DEMO MODE'}
-        </p>
+        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+          <p style="color: #666; font-size: 14px;">
+            Need help? Visit: <a href="https://drivemateweb.onrender.com">drivemateweb.onrender.com</a>
+          </p>
+        </div>
       </div>
     `;
 
-    const result = await this.sendEmail(userEmail, subject, html);
-    
-    if (!result) {
-      console.log(`⚠️ Welcome email to ${userEmail} queued for manual sending`);
-    }
-    
-    return result;
+    return await this.sendEmail(userEmail, subject, html);
   }
 
   // 2. Send service completion email to both user and provider
   async sendServiceCompletionEmail(userEmail, userName, providerEmail, providerName, requestId, amount, serviceType) {
-    const userSubject = `Service Completed - DriveMate #${requestId}`;
+    const userSubject = `Service Completed ✅ - DriveMate #${requestId}`;
     const providerSubject = `Service Completed Successfully - #${requestId}`;
 
     // Email to User
@@ -207,9 +135,13 @@ class EmailService {
           </table>
         </div>
         
-        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          Email delivery: ${this.transporter ? 'ACTIVE' : 'DEMO MODE - Please check app for updates'}
-        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://drivemateweb.onrender.com/dashboard" 
+             style="background: #28a745; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Make Payment & Rate Service
+          </a>
+        </div>
       </div>
     `;
 
@@ -241,9 +173,7 @@ class EmailService {
           </table>
         </div>
         
-        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          Email delivery: ${this.transporter ? 'ACTIVE' : 'DEMO MODE'}
-        </p>
+        <p>Thank you for providing excellent service!</p>
       </div>
     `;
 
@@ -253,12 +183,10 @@ class EmailService {
     const userResult = await this.sendEmail(userEmail, userSubject, userHtml);
     results.push({ to: 'user', success: userResult });
     
-    // Send to provider (if email provided)
+    // Send to provider
     if (providerEmail) {
       const providerResult = await this.sendEmail(providerEmail, providerSubject, providerHtml);
       results.push({ to: 'provider', success: providerResult });
-    } else {
-      console.log('⚠️ No provider email available for service completion notification');
     }
     
     return results;
@@ -266,7 +194,7 @@ class EmailService {
 
   // 3. Send profile update confirmation email
   async sendProfileUpdateEmail(userEmail, userName) {
-    const subject = `Profile Updated - DriveMate`;
+    const subject = `Profile Updated 🔐 - DriveMate`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -284,19 +212,17 @@ class EmailService {
           </div>
         </div>
         
-        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          Email delivery: ${this.transporter ? 'ACTIVE' : 'DEMO MODE - Changes saved successfully'}
-        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://drivemateweb.onrender.com/dashboard" 
+             style="background: #3366cc; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+            View Updated Profile
+          </a>
+        </div>
       </div>
     `;
 
-    const result = await this.sendEmail(userEmail, subject, html);
-    
-    if (!result) {
-      console.log(`⚠️ Profile update email to ${userEmail} queued for manual sending`);
-    }
-    
-    return result;
+    return await this.sendEmail(userEmail, subject, html);
   }
 
   // Keep existing methods for backward compatibility
@@ -327,9 +253,28 @@ class EmailService {
           </tr>
         </table>
         
-        <p style="color: #999; font-size: 12px; text-align: center;">
-          Email delivery: ${this.transporter ? 'ACTIVE' : 'DEMO MODE - Receipt available in app'}
-        </p>
+        <p>Best regards,<br>DriveMate Team</p>
+      </div>
+    `;
+
+    return await this.sendEmail(userEmail, subject, html);
+  }
+
+  async sendServiceCompletion(userEmail, userName, serviceDetails) {
+    const subject = `Service Completed - DriveMate #${serviceDetails.requestId}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Service Completed</h2>
+        <p>Hello ${userName},</p>
+        <p>Your ${serviceDetails.serviceType} service has been completed successfully!</p>
+        
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Request ID:</strong> ${serviceDetails.requestId}</p>
+          <p><strong>Service Provider:</strong> ${serviceDetails.providerName}</p>
+          <p><strong>Total Amount:</strong> ₹${serviceDetails.amount}</p>
+        </div>
+        
+        <p>Thank you for choosing DriveMate!</p>
       </div>
     `;
 
