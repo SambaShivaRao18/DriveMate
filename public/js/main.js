@@ -1359,3 +1359,31 @@ function openFullSizePhoto(photoUrl, caption) {
     const fullSizeModal = new bootstrap.Modal(document.getElementById('fullSizePhotoModal'));
     fullSizeModal.show();
 }
+
+// Function to show SMS limit toast
+function showSMSLimitToast() {
+  const toastHTML = `
+    <div class="toast align-items-center text-bg-warning border-0" role="alert" id="smsLimitToast">
+      <div class="d-flex">
+        <div class="toast-body">
+          ⚠️ <strong>SMS Limit Reached</strong> - Daily SMS quota exceeded. Some notifications may not be delivered.
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  `;
+  
+  // Add toast to container
+  document.getElementById('alertContainer').innerHTML += toastHTML;
+  
+  // Show toast
+  const toast = new bootstrap.Toast(document.getElementById('smsLimitToast'));
+  toast.show();
+  
+  // Remove toast after hiding
+  document.getElementById('smsLimitToast').addEventListener('hidden.bs.toast', function () {
+    this.remove();
+  });
+}
+
+// You can call this function when you detect SMS failures in your API responses

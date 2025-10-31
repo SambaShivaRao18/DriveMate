@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const smsService = require("../utils/smsService");
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -21,18 +22,36 @@ exports.registerUser = async (req, res) => {
         error: "User already exists with this email"
       });
     }
+
     const user = await User.create({ name, email, password, phone, role });
     console.log("User created successfully:", user.email);
+
     // Generate Token and set cookie
     const token = generateToken(user);
     res.cookie("token", token, { httpOnly: true });
+
+    // ✅ Send welcome SMS (non-blocking)
+    smsService.sendWelcomeSMS(user.phone, user.name)
+      .then(result => {
+        if (result.success) {
+          console.log('✅ Welcome SMS sent to:', user.phone);
+        } else {
+          console.log('⚠️ Welcome SMS failed:', result.error);
+        }
+      })
+      .catch(error => {
+        console.error('Welcome SMS error:', error);
+      });
+
     // AUTO-REDIRECT: If user is fuel-station or mechanic, redirect to provider registration
     if (role === 'fuel-station' || role === 'mechanic') {
       console.log("Redirecting new provider to registration form");
       return res.redirect('/provider/register');
     }
+
     // Regular users go to dashboard
     res.redirect('/dashboard');
+
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).render('pages/register', {
@@ -55,6 +74,7 @@ exports.loginUser = async (req, res) => {
         error: "Invalid email or password"
       });
     }
+
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       console.log("Password mismatch for:", email);
@@ -63,13 +83,16 @@ exports.loginUser = async (req, res) => {
         error: "Invalid email or password"
       });
     }
+
     // Generate Token and set cookie
     const token = generateToken(user);
     res.cookie("token", token, { httpOnly: true });
+
     console.log("Login successful:", user.email);
-   
+    
     // Redirect to dashboard after successful login - FIXED: redirect to /dashboard not /auth/dashboard
     res.redirect('/dashboard');
+
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).render('pages/login', {
@@ -92,9 +115,9 @@ exports.logoutUser = (req, res) => {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict'
   });
-  
+
   console.log("User logged out");
-  
+
   // Force redirect with cache buster
   res.redirect('/?logout=' + Date.now());
 };
@@ -119,7 +142,7 @@ exports.showRegister = (req, res) => {
 exports.showDashboard = async (req, res) => {
   try {
     console.log("Dashboard accessed by:", req.user.email);
-   
+    
     res.render('pages/dashboard', {
       user: req.user,
       service: req.query.service || null,

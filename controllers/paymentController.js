@@ -2,18 +2,18 @@ const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
 const ServiceProvider = require("../models/ServiceProvider");
 const emailService = require("../utils/emailService");
+const smsService = require("../utils/smsService");
 
 // @desc   Process payment for service request
 exports.processPayment = async (req, res) => {
   try {
     const { requestId, paymentMethod, amount, transactionId } = req.body;
     const user = req.user;
-
     console.log(`💰 Processing payment for request ${requestId} by user ${user.email}`);
     
     const serviceRequest = await ServiceRequest.findOne({ requestId })
       .populate('user', 'name email')
-      .populate('assignedProvider', 'businessName user');
+      .populate('assignedProvider', 'businessName user phone');
 
     if (!serviceRequest) {
       return res.status(404).json({
@@ -84,6 +84,30 @@ exports.processPayment = async (req, res) => {
       console.error('Email sending failed:', emailError);
     }
 
+    // ✅ SEND SERVICE COMPLETION SMS TO BOTH USER AND PROVIDER
+    try {
+      const provider = serviceRequest.assignedProvider;
+      if (provider && provider.phone) {
+        const smsResults = await smsService.sendServiceCompletionSMS(
+          serviceRequest.userPhone,
+          provider.phone,
+          requestId,
+          amount
+        );
+        
+        // Log SMS results
+        smsResults.forEach(result => {
+          if (result.success) {
+            console.log(`✅ ${result.to} completion SMS sent`);
+          } else {
+            console.log(`⚠️ ${result.to} completion SMS failed:`, result.error);
+          }
+        });
+      }
+    } catch (smsError) {
+      console.error('Completion SMS failed:', smsError);
+    }
+
     console.log(`✅ Payment processed for request ${requestId}: ₹${amount}`);
 
     res.json({
@@ -112,7 +136,6 @@ exports.getPaymentHistory = async (req, res) => {
   try {
     const user = req.user;
     console.log(`📋 Getting payment history for user ${user.email}`);
-
     const payments = await Payment.find({ user: user._id })
       .populate('request', 'requestId serviceType')
       .populate('provider', 'businessName')
@@ -139,7 +162,6 @@ exports.getProviderEarnings = async (req, res) => {
   try {
     const user = req.user;
     console.log(`💰 Getting earnings for provider ${user.email}`);
-
     const provider = await ServiceProvider.findOne({ user: user._id });
     
     if (!provider) {
@@ -182,7 +204,6 @@ exports.submitRating = async (req, res) => {
   try {
     const { requestId, rating, review } = req.body;
     const user = req.user;
-
     console.log(`⭐ Submitting rating for request ${requestId} by user ${user.email}`);
 
     const serviceRequest = await ServiceRequest.findOne({ requestId })
@@ -234,7 +255,6 @@ exports.submitRating = async (req, res) => {
     if (providerRequests.length > 0) {
       const totalRatings = providerRequests.length;
       const averageRating = providerRequests.reduce((sum, req) => sum + req.rating, 0) / totalRatings;
-
       provider.rating = parseFloat(averageRating.toFixed(1));
       provider.totalRatings = totalRatings;
       await provider.save();
