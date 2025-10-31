@@ -9,6 +9,7 @@ const serviceRoutes = require("./routes/serviceRoutes");
 const providerRoutes = require("./routes/providerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const path = require('path');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 
 // Import the required middleware and controller
@@ -33,6 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(methodOverride('_method'));
+app.use('/api/notifications', notificationRoutes);
 
 app.use((req, res, next) => {
   // Prevent caching for ALL responses

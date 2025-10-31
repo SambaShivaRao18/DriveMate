@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const emailService = require("../utils/emailService"); // Changed from SMS to Email
+const notificationService = require("../utils/notificationService");
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -30,17 +30,17 @@ exports.registerUser = async (req, res) => {
     const token = generateToken(user);
     res.cookie("token", token, { httpOnly: true });
 
-    // ✅ Send welcome EMAIL (non-blocking)
-    emailService.sendWelcomeEmail(user.email, user.name)
+    // ✅ SEND WELCOME NOTIFICATION (non-blocking)
+    notificationService.sendWelcomeNotification(user._id, user.name)
       .then(result => {
-        if (result) {
-          console.log('✅ Welcome email sent to:', user.email);
+        if (result.success) {
+          console.log('✅ Welcome notification created for:', user.email);
         } else {
-          console.log('⚠️ Welcome email failed to send');
+          console.log('⚠️ Welcome notification failed:', result.error);
         }
       })
       .catch(error => {
-        console.error('Welcome email error:', error);
+        console.error('Welcome notification error:', error);
       });
 
     // AUTO-REDIRECT: If user is fuel-station or mechanic, redirect to provider registration
@@ -90,7 +90,7 @@ exports.loginUser = async (req, res) => {
 
     console.log("Login successful:", user.email);
     
-    // Redirect to dashboard after successful login - FIXED: redirect to /dashboard not /auth/dashboard
+    // Redirect to dashboard after successful login
     res.redirect('/dashboard');
 
   } catch (error) {

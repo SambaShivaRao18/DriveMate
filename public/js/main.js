@@ -1386,4 +1386,209 @@ function showSMSLimitToast() {
   });
 }
 
+// Notification System
+class NotificationManager {
+  constructor() {
+    this.unreadCount = 0;
+    this.pollingInterval = null;
+    this.init();
+  }
+
+  init() {
+    // Load notifications on page load
+    this.loadNotifications();
+    
+    // Start polling for new notifications every 30 seconds
+    this.startPolling();
+    
+    // Setup notification bell click handler
+    this.setupEventListeners();
+  }
+
+  async loadNotifications() {
+    try {
+      const response = await fetch('/api/notifications/my-notifications');
+      const data = await response.json();
+      
+      if (data.success) {
+        this.updateNotificationBell(data.notifications);
+        this.displayNotifications(data.notifications);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  }
+
+  async getUnreadCount() {
+    try {
+      const response = await fetch('/api/notifications/unread-count');
+      const data = await response.json();
+      
+      if (data.success) {
+        this.unreadCount = data.count;
+        this.updateBadgeCount();
+      }
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+    }
+  }
+
+  updateNotificationBell(notifications) {
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+    this.unreadCount = unreadNotifications.length;
+    this.updateBadgeCount();
+  }
+
+  updateBadgeCount() {
+    const badge = document.getElementById('notificationCount');
+    if (badge) {
+      if (this.unreadCount > 0) {
+        badge.textContent = this.unreadCount;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  }
+
+  displayNotifications(notifications) {
+    const notificationList = document.getElementById('notificationList');
+    if (!notificationList) return;
+
+    if (notifications.length === 0) {
+      notificationList.innerHTML = '<li class="text-center py-3 text-muted">No notifications</li>';
+      return;
+    }
+
+    let html = '';
+    notifications.forEach(notification => {
+      const timeAgo = this.getTimeAgo(notification.createdAt);
+      const isUnreadClass = !notification.isRead ? 'bg-light border-start border-primary' : '';
+      
+      html += `
+        <li class="notification-item ${isUnreadClass}" data-id="${notification._id}">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">${notification.title}</h6>
+            <small class="text-muted">${timeAgo}</small>
+          </div>
+          <p class="mb-1">${notification.message}</p>
+          <small class="text-muted">Click to mark as read</small>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+      `;
+    });
+
+    // Add "Mark all as read" button if there are unread notifications
+    if (this.unreadCount > 0) {
+      html += `
+        <li class="text-center">
+          <button class="btn btn-sm btn-outline-primary w-100" onclick="notificationManager.markAllAsRead()">
+            Mark all as read
+          </button>
+        </li>
+      `;
+    }
+
+    notificationList.innerHTML = html;
+    
+    // Add click handlers to mark as read
+    this.addNotificationClickHandlers();
+  }
+
+  addNotificationClickHandlers() {
+    document.querySelectorAll('.notification-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const notificationId = item.getAttribute('data-id');
+        this.markAsRead(notificationId);
+      });
+    });
+  }
+
+  async markAsRead(notificationId) {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update UI
+        const item = document.querySelector(`[data-id="${notificationId}"]`);
+        if (item) {
+          item.classList.remove('bg-light', 'border-start', 'border-primary');
+        }
+        
+        // Update count
+        this.unreadCount = Math.max(0, this.unreadCount - 1);
+        this.updateBadgeCount();
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  }
+
+  async markAllAsRead() {
+    try {
+      const response = await fetch('/api/notifications/mark-all-read', {
+        method: 'PUT'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update all UI items
+        document.querySelectorAll('.notification-item').forEach(item => {
+          item.classList.remove('bg-light', 'border-start', 'border-primary');
+        });
+        
+        // Update count
+        this.unreadCount = 0;
+        this.updateBadgeCount();
+        
+        showAlert('All notifications marked as read', 'success');
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  }
+
+  startPolling() {
+    // Check for new notifications every 30 seconds
+    this.pollingInterval = setInterval(() => {
+      this.getUnreadCount();
+    }, 30000);
+  }
+
+  stopPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
+  }
+
+  getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  }
+
+  setupEventListeners() {
+    // Refresh notifications when dropdown is opened
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    if (notificationDropdown) {
+      notificationDropdown.addEventListener('show.bs.dropdown', () => {
+        this.loadNotifications();
+      });
+    }
+  }
+}
+
+// Initialize notification manager
+const notificationManager = new NotificationManager();
+
 // You can call this function when you detect SMS failures in your API responses

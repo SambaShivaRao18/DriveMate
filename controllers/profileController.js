@@ -3,7 +3,7 @@ const ServiceProvider = require("../models/ServiceProvider");
 const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
 const { uploadQRToCloudinary, deleteQRFromCloudinary } = require('../config/upload');
-const emailService = require("../utils/emailService"); // Changed from SMS to Email
+const notificationService = require("../utils/notificationService");
 
 // Helper function for status badge classes
 function getStatusBadgeClass(status) {
@@ -62,7 +62,7 @@ exports.showTravellerProfile = async (req, res) => {
         mechanicServices,
         totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0
       },
-      getStatusBadgeClass: getStatusBadgeClass // Pass the function to EJS
+      getStatusBadgeClass: getStatusBadgeClass
     });
 
   } catch (error) {
@@ -125,7 +125,7 @@ exports.showProviderProfile = async (req, res) => {
         totalEarnings: totalEarnings.length > 0 ? totalEarnings[0].total : 0,
         completionRate: totalServices > 0 ? Math.round((completedServices / totalServices) * 100) : 0
       },
-      getStatusBadgeClass: getStatusBadgeClass // Pass the function to EJS
+      getStatusBadgeClass: getStatusBadgeClass
     });
 
   } catch (error) {
@@ -147,17 +147,17 @@ exports.updateUserProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // ✅ SEND PROFILE UPDATE EMAIL
-    emailService.sendProfileUpdateEmail(user.email, user.name)
+    // ✅ SEND PROFILE UPDATE NOTIFICATION (non-blocking)
+    notificationService.sendProfileUpdateNotification(user._id, user.name)
       .then(result => {
-        if (result) {
-          console.log('✅ Profile update email sent to:', user.email);
+        if (result.success) {
+          console.log('✅ Profile update notification created for:', user.email);
         } else {
-          console.log('⚠️ Profile update email failed to send');
+          console.log('⚠️ Profile update notification failed:', result.error);
         }
       })
       .catch(error => {
-        console.error('Profile update email error:', error);
+        console.error('Profile update notification error:', error);
       });
 
     res.json({
@@ -223,17 +223,17 @@ exports.updateProviderProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // ✅ SEND PROFILE UPDATE EMAIL
-    emailService.sendProfileUpdateEmail(user.email, user.name)
+    // ✅ SEND PROFILE UPDATE NOTIFICATION (non-blocking)
+    notificationService.sendProfileUpdateNotification(user._id, user.name)
       .then(result => {
-        if (result) {
-          console.log('✅ Provider profile update email sent to:', user.email);
+        if (result.success) {
+          console.log('✅ Provider profile update notification created for:', user.email);
         } else {
-          console.log('⚠️ Provider profile update email failed to send');
+          console.log('⚠️ Provider profile update notification failed:', result.error);
         }
       })
       .catch(error => {
-        console.error('Provider profile update email error:', error);
+        console.error('Provider profile update notification error:', error);
       });
 
     res.json({

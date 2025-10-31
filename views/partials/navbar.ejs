@@ -24,8 +24,26 @@
 
         <!-- Desktop Navigation -->
         <div class="collapse navbar-collapse d-lg-block" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-center">
                 <% if (user) { %>
+                    <!-- Notification Bell -->
+                    <li class="nav-item dropdown me-2">
+                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #FFEB3B !important;">
+                            🔔
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                                  id="notificationCount" style="display: none; font-size: 0.6em; min-width: 18px; height: 18px; line-height: 1;">
+                                0
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="width: 350px; max-height: 400px; overflow-y: auto;" 
+                            id="notificationDropdown">
+                            <li><h6 class="dropdown-header">Notifications</h6></li>
+                            <div id="notificationList">
+                                <li class="text-center py-3 text-muted">Loading notifications...</li>
+                            </div>
+                        </ul>
+                    </li>
+
                     <!-- User dropdown for desktop -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" 

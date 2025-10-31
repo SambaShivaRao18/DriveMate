@@ -1,8 +1,7 @@
 const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
 const ServiceProvider = require("../models/ServiceProvider");
-const emailService = require("../utils/emailService");
-const User = require("../models/User"); // Added to get provider email
+const notificationService = require("../utils/notificationService");
 
 // @desc   Process payment for service request
 exports.processPayment = async (req, res) => {
@@ -13,7 +12,7 @@ exports.processPayment = async (req, res) => {
     
     const serviceRequest = await ServiceRequest.findOne({ requestId })
       .populate('user', 'name email')
-      .populate('assignedProvider', 'businessName user phone email');
+      .populate('assignedProvider', 'businessName user phone');
 
     if (!serviceRequest) {
       return res.status(404).json({
@@ -65,54 +64,37 @@ exports.processPayment = async (req, res) => {
     serviceRequest.paymentStatus = 'paid';
     await serviceRequest.save();
 
-    // ✅ MOVED EMAIL SENDING CODE HERE
-    try {
-      // Send email receipt
-      await emailService.sendPaymentReceipt(
-        serviceRequest.user.email,
-        serviceRequest.user.name,
-        {
-          requestId: serviceRequest.requestId,
-          serviceType: serviceRequest.serviceType,
-          amount: amount,
-          paymentMethod: paymentMethod,
-          transactionId: payment.transactionId
-        }
-      );
-      console.log('✅ Payment receipt email sent');
-    } catch (emailError) {
-      console.error('Payment receipt email failed:', emailError);
-    }
-
-    // ✅ SEND SERVICE COMPLETION EMAIL TO BOTH USER AND PROVIDER
-    try {
-      const provider = serviceRequest.assignedProvider;
-      if (provider) {
-        // Get provider's user details for email
-        const providerUser = await User.findById(provider.user);
-        
-        const emailResults = await emailService.sendServiceCompletionEmail(
-          serviceRequest.user.email,        // User email
-          serviceRequest.user.name,         // User name
-          provider.email || providerUser?.email, // Provider email
-          provider.businessName,            // Provider business name
-          requestId,                        // Request ID
-          amount,                           // Amount
-          serviceRequest.serviceType        // Service type
-        );
-        
-        // Log email results
-        emailResults.forEach(result => {
-          if (result.success) {
-            console.log(`✅ ${result.to} completion email sent`);
-          } else {
-            console.log(`⚠️ ${result.to} completion email failed`);
-          }
-        });
+    // ✅ SEND SERVICE COMPLETION NOTIFICATION (non-blocking)
+    notificationService.sendServiceCompletionNotification(
+      serviceRequest.user._id,
+      serviceRequest.user.name,
+      requestId,
+      amount
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Service completion notification created');
+      } else {
+        console.log('⚠️ Service completion notification failed:', result.error);
       }
-    } catch (emailError) {
-      console.error('Completion email failed:', emailError);
-    }
+    }).catch(error => {
+      console.error('Service completion notification error:', error);
+    });
+
+    // ✅ SEND PAYMENT NOTIFICATION (non-blocking)
+    notificationService.sendPaymentNotification(
+      serviceRequest.user._id,
+      serviceRequest.user.name,
+      requestId,
+      amount
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Payment notification created');
+      } else {
+        console.log('⚠️ Payment notification failed:', result.error);
+      }
+    }).catch(error => {
+      console.error('Payment notification error:', error);
+    });
 
     console.log(`✅ Payment processed for request ${requestId}: ₹${amount}`);
 
