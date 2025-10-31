@@ -3,7 +3,7 @@ const ServiceProvider = require("../models/ServiceProvider");
 const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
 const { uploadQRToCloudinary, deleteQRFromCloudinary } = require('../config/upload');
-const smsService = require("../utils/smsService");
+const emailService = require("../utils/emailService"); // Changed from SMS to Email
 
 // Helper function for status badge classes
 function getStatusBadgeClass(status) {
@@ -147,17 +147,17 @@ exports.updateUserProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // ✅ SEND PROFILE UPDATE SMS
-    smsService.sendProfileUpdateSMS(user.phone, user.name)
+    // ✅ SEND PROFILE UPDATE EMAIL
+    emailService.sendProfileUpdateEmail(user.email, user.name)
       .then(result => {
-        if (result.success) {
-          console.log('✅ Profile update SMS sent to:', user.phone);
+        if (result) {
+          console.log('✅ Profile update email sent to:', user.email);
         } else {
-          console.log('⚠️ Profile update SMS failed:', result.error);
+          console.log('⚠️ Profile update email failed to send');
         }
       })
       .catch(error => {
-        console.error('Profile update SMS error:', error);
+        console.error('Profile update email error:', error);
       });
 
     res.json({
@@ -223,17 +223,17 @@ exports.updateProviderProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // ✅ SEND PROFILE UPDATE SMS
-    smsService.sendProfileUpdateSMS(user.phone, user.name)
+    // ✅ SEND PROFILE UPDATE EMAIL
+    emailService.sendProfileUpdateEmail(user.email, user.name)
       .then(result => {
-        if (result.success) {
-          console.log('✅ Provider profile update SMS sent to:', user.phone);
+        if (result) {
+          console.log('✅ Provider profile update email sent to:', user.email);
         } else {
-          console.log('⚠️ Provider profile update SMS failed:', result.error);
+          console.log('⚠️ Provider profile update email failed to send');
         }
       })
       .catch(error => {
-        console.error('Provider profile update SMS error:', error);
+        console.error('Provider profile update email error:', error);
       });
 
     res.json({

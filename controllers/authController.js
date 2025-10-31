@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const smsService = require("../utils/smsService");
+const emailService = require("../utils/emailService"); // Changed from SMS to Email
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -30,17 +30,17 @@ exports.registerUser = async (req, res) => {
     const token = generateToken(user);
     res.cookie("token", token, { httpOnly: true });
 
-    // ✅ Send welcome SMS (non-blocking)
-    smsService.sendWelcomeSMS(user.phone, user.name)
+    // ✅ Send welcome EMAIL (non-blocking)
+    emailService.sendWelcomeEmail(user.email, user.name)
       .then(result => {
-        if (result.success) {
-          console.log('✅ Welcome SMS sent to:', user.phone);
+        if (result) {
+          console.log('✅ Welcome email sent to:', user.email);
         } else {
-          console.log('⚠️ Welcome SMS failed:', result.error);
+          console.log('⚠️ Welcome email failed to send');
         }
       })
       .catch(error => {
-        console.error('Welcome SMS error:', error);
+        console.error('Welcome email error:', error);
       });
 
     // AUTO-REDIRECT: If user is fuel-station or mechanic, redirect to provider registration

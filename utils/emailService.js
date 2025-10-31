@@ -6,8 +6,7 @@ dotenv.config();
 
 class EmailService {
   constructor() {
-    this.transporter = nodemailer.createTransport({ // FIXED: createTransport (not createTransporter)
-      // Configure with your email service (Gmail, SendGrid, etc.)
+    this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
@@ -20,7 +19,7 @@ class EmailService {
   async sendEmail(to, subject, html) {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'noreply@roadside.com',
+        from: process.env.EMAIL_USER || 'noreply@drivemate.com',
         to: to,
         subject: subject,
         html: html
@@ -41,9 +40,219 @@ class EmailService {
     }
   }
 
-  // Send payment receipt
+  // 1. Send welcome email to newly registered users
+  async sendWelcomeEmail(userEmail, userName) {
+    const subject = `Welcome to DriveMate - Your Roadside Assistance Partner`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #3366cc; margin-bottom: 10px;">🚗 DriveMate</h1>
+          <p style="color: #666; font-size: 16px;">Roadside Assistance Reimagined</p>
+        </div>
+        
+        <h2 style="color: #333;">Welcome to DriveMate, ${userName}! 👋</h2>
+        
+        <p>We're thrilled to have you on board. Now you can get instant help for:</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 24px; margin-right: 15px;">⛽</span>
+            <div>
+              <h3 style="margin: 0; color: #333;">Fuel Assistance</h3>
+              <p style="margin: 5px 0 0 0; color: #666;">Get fuel delivered to your location within minutes</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 15px;">🔧</span>
+            <div>
+              <h3 style="margin: 0; color: #333;">Mechanical Help</h3>
+              <p style="margin: 5px 0 0 0; color: #666;">Expert mechanics for all vehicle types and issues</p>
+            </div>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://drivemateweb.onrender.com/dashboard" 
+             style="background: #3366cc; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Get Started Now
+          </a>
+        </div>
+        
+        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+          <p style="color: #666; font-size: 14px;">
+            Need help? Visit our website or contact support at drivemateweb.onrender.com
+          </p>
+        </div>
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+          This is an automated message. Please do not reply to this email.
+        </p>
+      </div>
+    `;
+
+    return await this.sendEmail(userEmail, subject, html);
+  }
+
+  // 2. Send service completion email to both user and provider
+  async sendServiceCompletionEmail(userEmail, userName, providerEmail, providerName, requestId, amount, serviceType) {
+    const userSubject = `Service Completed - DriveMate #${requestId}`;
+    const providerSubject = `Service Completed Successfully - #${requestId}`;
+
+    // Email to User
+    const userHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #28a745; margin-bottom: 10px;">✅ Service Completed</h1>
+        </div>
+        
+        <h2>Great news, ${userName}! 🎉</h2>
+        <p>Your ${serviceType} service has been completed successfully.</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">Service Details</h3>
+          <table style="width: 100%;">
+            <tr>
+              <td style="padding: 8px 0;"><strong>Request ID:</strong></td>
+              <td style="padding: 8px 0;">${requestId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Service Type:</strong></td>
+              <td style="padding: 8px 0;">${serviceType === 'fuel' ? '⛽ Fuel Delivery' : '🔧 Mechanical Help'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Service Provider:</strong></td>
+              <td style="padding: 8px 0;">${providerName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Total Amount:</strong></td>
+              <td style="padding: 8px 0; font-weight: bold; color: #28a745;">₹${amount}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h4 style="margin-top: 0; color: #0066cc;">Next Steps</h4>
+          <p>Please log in to your account to:</p>
+          <ul>
+            <li>Make payment for the service</li>
+            <li>Rate your service experience</li>
+            <li>Download payment receipt</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://drivemateweb.onrender.com/dashboard" 
+             style="background: #28a745; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Make Payment & Rate Service
+          </a>
+        </div>
+      </div>
+    `;
+
+    // Email to Provider
+    const providerHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #28a745; margin-bottom: 10px;">✅ Service Completed</h1>
+        </div>
+        
+        <h2>Great job, ${providerName}! 🎉</h2>
+        <p>You have successfully completed service request <strong>#${requestId}</strong>.</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">Service Summary</h3>
+          <table style="width: 100%;">
+            <tr>
+              <td style="padding: 8px 0;"><strong>Request ID:</strong></td>
+              <td style="padding: 8px 0;">${requestId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Service Type:</strong></td>
+              <td style="padding: 8px 0;">${serviceType === 'fuel' ? '⛽ Fuel Delivery' : '🔧 Mechanical Help'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Amount Earned:</strong></td>
+              <td style="padding: 8px 0; font-weight: bold; color: #28a745;">₹${amount}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0;"><strong>Completed At:</strong></td>
+              <td style="padding: 8px 0;">${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h4 style="margin-top: 0; color: #0066cc;">Payment Information</h4>
+          <p>The payment of <strong>₹${amount}</strong> will be processed and reflected in your earnings shortly.</p>
+        </div>
+        
+        <p>Thank you for providing excellent service! Your rating will be updated once the customer submits their feedback.</p>
+      </div>
+    `;
+
+    const results = [];
+    
+    // Send to user
+    const userResult = await this.sendEmail(userEmail, userSubject, userHtml);
+    results.push({ to: 'user', success: userResult });
+    
+    // Send to provider
+    if (providerEmail) {
+      const providerResult = await this.sendEmail(providerEmail, providerSubject, providerHtml);
+      results.push({ to: 'provider', success: providerResult });
+    }
+    
+    return results;
+  }
+
+  // 3. Send profile update confirmation email
+  async sendProfileUpdateEmail(userEmail, userName) {
+    const subject = `Profile Updated - DriveMate`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #3366cc; margin-bottom: 10px;">🔐 Profile Updated</h1>
+        </div>
+        
+        <h2>Hi ${userName},</h2>
+        
+        <p>Your DriveMate profile has been updated successfully.</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <div style="text-align: center;">
+            <span style="font-size: 48px; color: #28a745;">✅</span>
+            <h3 style="color: #28a745; margin: 10px 0;">Update Confirmed</h3>
+          </div>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h4 style="margin-top: 0; color: #856404;">Security Notice</h4>
+          <p>If you didn't make this change, please contact our support team immediately to secure your account.</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://drivemateweb.onrender.com/dashboard" 
+             style="background: #3366cc; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold;">
+            View Updated Profile
+          </a>
+        </div>
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+          This is an automated security notification. Please do not reply to this email.
+        </p>
+      </div>
+    `;
+
+    return await this.sendEmail(userEmail, subject, html);
+  }
+
+  // Keep existing methods for backward compatibility
   async sendPaymentReceipt(userEmail, userName, paymentDetails) {
-    const subject = `Payment Receipt - Roadside Assistance #${paymentDetails.requestId}`;
+    const subject = `Payment Receipt - DriveMate #${paymentDetails.requestId}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Payment Receipt</h2>
@@ -78,16 +287,15 @@ class EmailService {
         </table>
         
         <p>If you have any questions, please contact our support team.</p>
-        <p>Best regards,<br>Roadside Assistance Team</p>
+        <p>Best regards,<br>DriveMate Team</p>
       </div>
     `;
 
     return await this.sendEmail(userEmail, subject, html);
   }
 
-  // Send service completion notification
   async sendServiceCompletion(userEmail, userName, serviceDetails) {
-    const subject = `Service Completed - Roadside Assistance #${serviceDetails.requestId}`;
+    const subject = `Service Completed - DriveMate #${serviceDetails.requestId}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Service Completed</h2>
@@ -102,8 +310,8 @@ class EmailService {
         
         <p>Please log in to your account to make the payment and rate your service experience.</p>
         
-        <p>Thank you for choosing Roadside Assistance!</p>
-        <p>Best regards,<br>Roadside Assistance Team</p>
+        <p>Thank you for choosing DriveMate!</p>
+        <p>Best regards,<br>DriveMate Team</p>
       </div>
     `;
 

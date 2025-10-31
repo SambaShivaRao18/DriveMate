@@ -2,7 +2,7 @@ const ServiceRequest = require("../models/ServiceRequest");
 const Payment = require("../models/Payment");
 const ServiceProvider = require("../models/ServiceProvider");
 const emailService = require("../utils/emailService");
-const smsService = require("../utils/smsService");
+const User = require("../models/User"); // Added to get provider email
 
 // @desc   Process payment for service request
 exports.processPayment = async (req, res) => {
@@ -13,7 +13,7 @@ exports.processPayment = async (req, res) => {
     
     const serviceRequest = await ServiceRequest.findOne({ requestId })
       .populate('user', 'name email')
-      .populate('assignedProvider', 'businessName user phone');
+      .populate('assignedProvider', 'businessName user phone email');
 
     if (!serviceRequest) {
       return res.status(404).json({
@@ -81,31 +81,37 @@ exports.processPayment = async (req, res) => {
       );
       console.log('✅ Payment receipt email sent');
     } catch (emailError) {
-      console.error('Email sending failed:', emailError);
+      console.error('Payment receipt email failed:', emailError);
     }
 
-    // ✅ SEND SERVICE COMPLETION SMS TO BOTH USER AND PROVIDER
+    // ✅ SEND SERVICE COMPLETION EMAIL TO BOTH USER AND PROVIDER
     try {
       const provider = serviceRequest.assignedProvider;
-      if (provider && provider.phone) {
-        const smsResults = await smsService.sendServiceCompletionSMS(
-          serviceRequest.userPhone,
-          provider.phone,
-          requestId,
-          amount
+      if (provider) {
+        // Get provider's user details for email
+        const providerUser = await User.findById(provider.user);
+        
+        const emailResults = await emailService.sendServiceCompletionEmail(
+          serviceRequest.user.email,        // User email
+          serviceRequest.user.name,         // User name
+          provider.email || providerUser?.email, // Provider email
+          provider.businessName,            // Provider business name
+          requestId,                        // Request ID
+          amount,                           // Amount
+          serviceRequest.serviceType        // Service type
         );
         
-        // Log SMS results
-        smsResults.forEach(result => {
+        // Log email results
+        emailResults.forEach(result => {
           if (result.success) {
-            console.log(`✅ ${result.to} completion SMS sent`);
+            console.log(`✅ ${result.to} completion email sent`);
           } else {
-            console.log(`⚠️ ${result.to} completion SMS failed:`, result.error);
+            console.log(`⚠️ ${result.to} completion email failed`);
           }
         });
       }
-    } catch (smsError) {
-      console.error('Completion SMS failed:', smsError);
+    } catch (emailError) {
+      console.error('Completion email failed:', emailError);
     }
 
     console.log(`✅ Payment processed for request ${requestId}: ₹${amount}`);
