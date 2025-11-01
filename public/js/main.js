@@ -158,12 +158,13 @@ function showError(error, locationField) {
     showAlert(message, 'danger');
 }
 
-// Calculate Fuel Cost and Find Stations
+// Calculate Fuel Cost and Find Stations (UPDATED)
 async function calculateFuelCost() {
     const form = document.getElementById('fuelForm');
     const formData = new FormData(form);
     const latitude = formData.get('latitude');
     const longitude = formData.get('longitude');
+    
     if (!latitude || !longitude) {
         showAlert('Please get your current location first', 'warning');
         return;
@@ -183,21 +184,24 @@ async function calculateFuelCost() {
             fuelType: formData.get('fuelType'),
             quantity: parseInt(formData.get('quantity')),
             vehicleType: formData.get('vehicleType'),
-            userAddress: formData.get('userAddress'),
-            userPhone: formData.get('userPhone'),
             latitude: parseFloat(latitude),
             longitude: parseFloat(longitude)
         };
-        console.log('Sending fuel request:', requestData);
-        const response = await fetch('/api/services/request', {
+
+        console.log('Finding fuel providers:', requestData);
+        
+        // Use the NEW endpoint that only finds providers without creating requests
+        const response = await fetch('/api/services/find-providers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(requestData)
         });
+        
         const data = await response.json();
-        console.log('Fuel response:', data);
+        console.log('Fuel providers response:', data);
+        
         if (data.success) {
             currentServiceData.fuel = data;
             displayFuelResults(data);
@@ -210,7 +214,7 @@ async function calculateFuelCost() {
             throw new Error(data.error || 'Failed to find stations');
         }
     } catch (error) {
-        console.error('Error calculating fuel cost:', error);
+        console.error('Error finding fuel stations:', error);
         showAlert('❌ Error: ' + error.message, 'danger');
     } finally {
         calculateBtn.disabled = false;
@@ -218,7 +222,8 @@ async function calculateFuelCost() {
     }
 }
 
-// Display Fuel Results with enhanced provider cards
+
+/// Display Fuel Results with enhanced provider cards
 function displayFuelResults(data) {
     const resultsDiv = document.getElementById('fuelResults');
     const stationsList = document.getElementById('fuelStationsList');
@@ -319,6 +324,7 @@ function displayFuelResults(data) {
 
         // Show submit button only when providers are available
         document.getElementById('submitFuelBtn').style.display = 'block';
+        document.getElementById('submitFuelBtn').disabled = false;
     } else {
         costDiv.innerHTML = `
             <div class="alert alert-info">
@@ -327,8 +333,9 @@ function displayFuelResults(data) {
                 <p class="mb-0 small">Please try again in a different location or during business hours.</p>
             </div>
         `;
-        // Hide submit button when no providers
+        // Hide AND disable submit button when no providers
         document.getElementById('submitFuelBtn').style.display = 'none';
+        document.getElementById('submitFuelBtn').disabled = true;
     }
 
     resultsDiv.style.display = 'block';
@@ -337,43 +344,79 @@ function displayFuelResults(data) {
 }
 
 
-// Submit Fuel Request
+// Submit Fuel Request (UPDATED)
 async function submitFuelRequest() {
     if (!currentServiceData.fuel) {
         showAlert('Please calculate cost first', 'warning');
         return;
     }
+
     const submitBtn = document.getElementById('submitFuelBtn');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Submitting...';
+
     try {
-        showAlert('🎉 Fuel assistance request submitted successfully! Help is on the way.', 'success');
-        // Close modal immediately and reset
-        const modal = bootstrap.Modal.getInstance(document.getElementById('fuelModal'));
-        modal.hide();
-        // Reset form immediately
-        document.getElementById('fuelForm').reset();
-        document.getElementById('fuelResults').style.display = 'none';
-        document.getElementById('submitFuelBtn').style.display = 'none';
-        // Reload requests list immediately
-        await loadUserRequests();
-        // Reset button state
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Submit Request';
+        const form = document.getElementById('fuelForm');
+        const formData = new FormData(form);
+        
+        const requestData = {
+            serviceType: 'fuel',
+            fuelType: formData.get('fuelType'),
+            quantity: parseInt(formData.get('quantity')),
+            vehicleType: formData.get('vehicleType'),
+            userAddress: formData.get('userAddress'),
+            userPhone: formData.get('userPhone'),
+            latitude: parseFloat(formData.get('latitude')),
+            longitude: parseFloat(formData.get('longitude'))
+        };
+
+        console.log('Submitting fuel request:', requestData);
+        
+        // Use the ORIGINAL endpoint to create the actual service request
+        const response = await fetch('/api/services/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('🎉 Fuel assistance request submitted successfully! Help is on the way.', 'success');
+            
+            // Close modal immediately and reset
+            const modal = bootstrap.Modal.getInstance(document.getElementById('fuelModal'));
+            modal.hide();
+            
+            // Reset form immediately
+            document.getElementById('fuelForm').reset();
+            document.getElementById('fuelResults').style.display = 'none';
+            document.getElementById('submitFuelBtn').style.display = 'none';
+            
+            // Reload requests list immediately
+            await loadUserRequests();
+        } else {
+            throw new Error(data.error || 'Failed to submit request');
+        }
     } catch (error) {
         console.error('Error submitting fuel request:', error);
         showAlert('❌ Error submitting request: ' + error.message, 'danger');
+    } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Submit Request';
     }
 }
 
-// Calculate Mechanic Cost and Find Mechanics
+
+// Calculate Mechanic Cost and Find Mechanics (UPDATED)
 async function calculateMechanicCost() {
     const form = document.getElementById('mechanicForm');
     const formData = new FormData(form);
     const latitude = formData.get('latitude');
     const longitude = formData.get('longitude');
+    
     if (!latitude || !longitude) {
         showAlert('Please get your current location first', 'warning');
         return;
@@ -382,29 +425,34 @@ async function calculateMechanicCost() {
         showAlert('Please describe your problem', 'warning');
         return;
     }
+
     const calculateBtn = document.getElementById('calculateMechBtn');
     calculateBtn.disabled = true;
     calculateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Finding mechanics...';
+
     try {
         const requestData = {
             serviceType: 'mechanic',
             problemDescription: formData.get('problemDescription'),
             vehicleType: formData.get('vehicleType'),
-            userAddress: formData.get('userAddress'),
-            userPhone: formData.get('userPhone'),
             latitude: parseFloat(latitude),
             longitude: parseFloat(longitude)
         };
-        console.log('Sending mechanic request:', requestData);
-        const response = await fetch('/api/services/request', {
+
+        console.log('Finding mechanic providers:', requestData);
+        
+        // Use the NEW endpoint that only finds providers without creating requests
+        const response = await fetch('/api/services/find-providers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(requestData)
         });
+        
         const data = await response.json();
-        console.log('Mechanic response:', data);
+        console.log('Mechanic providers response:', data);
+        
         if (data.success) {
             currentServiceData.mechanic = data;
             displayMechanicResults(data);
@@ -424,6 +472,7 @@ async function calculateMechanicCost() {
         calculateBtn.innerHTML = 'Find Nearby Mechanics';
     }
 }
+
 
 // Display Mechanic Results with enhanced provider cards
 function displayMechanicResults(data) {
@@ -523,6 +572,7 @@ function displayMechanicResults(data) {
 
         // Show submit button only when mechanics are available
         document.getElementById('submitMechBtn').style.display = 'block';
+        document.getElementById('submitMechBtn').disabled = false;
     } else {
         costDiv.innerHTML = `
             <div class="alert alert-info">
@@ -531,8 +581,9 @@ function displayMechanicResults(data) {
                 <p class="mb-0 small">Cost details will be available when mechanics are found nearby.</p>
             </div>
         `;
-        // Hide submit button when no mechanics
+        // Hide AND disable submit button when no mechanics
         document.getElementById('submitMechBtn').style.display = 'none';
+        document.getElementById('submitMechBtn').disabled = true;
     }
 
     resultsDiv.style.display = 'block';
@@ -540,60 +591,112 @@ function displayMechanicResults(data) {
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Submit Mechanic Request
+// Submit Mechanic Request (UPDATED)
 async function submitMechanicRequest() {
     if (!currentServiceData.mechanic) {
         showAlert('Please find mechanics first', 'warning');
         return;
     }
+
     const submitBtn = document.getElementById('submitMechBtn');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Submitting...';
+
     try {
-        showAlert('🎉 Mechanic assistance request submitted successfully! Help is on the way.', 'success');
-        // Close modal immediately and reset
-        const modal = bootstrap.Modal.getInstance(document.getElementById('mechanicModal'));
-        modal.hide();
-        // Reset form immediately
-        document.getElementById('mechanicForm').reset();
-        document.getElementById('mechanicResults').style.display = 'none';
-        document.getElementById('submitMechBtn').style.display = 'none';
-        // Reload requests list immediately
-        await loadUserRequests();
-        // Reset button state
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Submit Request';
+        const form = document.getElementById('mechanicForm');
+        const formData = new FormData(form);
+        
+        const requestData = {
+            serviceType: 'mechanic',
+            problemDescription: formData.get('problemDescription'),
+            vehicleType: formData.get('vehicleType'),
+            userAddress: formData.get('userAddress'),
+            userPhone: formData.get('userPhone'),
+            latitude: parseFloat(formData.get('latitude')),
+            longitude: parseFloat(formData.get('longitude'))
+        };
+
+        console.log('Submitting mechanic request:', requestData);
+        
+        // Use the ORIGINAL endpoint to create the actual service request
+        const response = await fetch('/api/services/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Upload photos if any were selected
+            const photoFiles = document.getElementById('problemPhotos').files;
+            if (photoFiles.length > 0) {
+                await uploadProblemPhotos(data.request.requestId, photoFiles);
+            }
+
+            showAlert('🎉 Mechanic assistance request submitted successfully! Help is on the way.', 'success');
+            
+            // Close modal immediately and reset
+            const modal = bootstrap.Modal.getInstance(document.getElementById('mechanicModal'));
+            modal.hide();
+            
+            // Reset form immediately
+            document.getElementById('mechanicForm').reset();
+            document.getElementById('mechanicResults').style.display = 'none';
+            document.getElementById('submitMechBtn').style.display = 'none';
+            
+            // Reload requests list immediately
+            await loadUserRequests();
+        } else {
+            throw new Error(data.error || 'Failed to submit request');
+        }
     } catch (error) {
         console.error('Error submitting mechanic request:', error);
         showAlert('❌ Error submitting request: ' + error.message, 'danger');
+    } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Submit Request';
     }
 }
 
-// Load user requests
+// Load user requests - UPDATED with smaller cancel button
 async function loadUserRequests() {
     const requestsList = document.getElementById('requestsList');
     if (!requestsList) return;
+
     // Show skeleton loader
     showSkeletonLoader(requestsList, 'requests');
+
     try {
         const response = await fetch('/api/services/my-requests');
         const data = await response.json();
+
         if (data.success && data.requests && data.requests.length > 0) {
             let requestsHTML = '';
+
             data.requests.forEach(request => {
                 const statusBadge = getStatusBadge(request.status);
                 const date = new Date(request.createdAt).toLocaleString();
-                // Add payment and rating buttons
+
+                // Add payment, rating, and cancel buttons
                 const paymentButton = request.status === 'completed' && request.paymentStatus !== 'paid' ?
                     `<button class="btn btn-success btn-sm mt-1 btn-mobile" onclick="showPaymentModal('${request.requestId}', '${request.serviceType} - ${request.requestId}', ${request.costEstimate.totalCost})">
                         💰 Pay Now
                     </button>` : '';
+
                 const ratingButton = request.status === 'completed' && request.paymentStatus === 'paid' && !request.rating ?
-                    `<button class="btn btn-warning btn-sm mt-1 btn-mobile" onclick="showRatingModal('${request.requestId}')">
+                    `<button class="btn btn-warning btn-sm mt-1 ms-1 btn-mobile" onclick="showRatingModal('${request.requestId}')">
                         ⭐ Rate
                     </button>` : '';
+
+                // Add cancel button for pending and accepted requests - UPDATED with smaller size
+                const cancelButton = (request.status === 'pending' || request.status === 'accepted') ?
+                    `<button class="btn btn-outline-danger btn-sm mt-1 ms-1 btn-mobile" onclick="cancelRequest('${request.requestId}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                        ❌ Cancel
+                    </button>` : '';
+
                 requestsHTML += `
                     <div class="card mb-3">
                         <div class="card-body">
@@ -612,8 +715,11 @@ async function loadUserRequests() {
                         `<strong>Problem:</strong> ${request.problemDescription}`
                     }
                                     </p>
-                                    ${paymentButton}
-                                    ${ratingButton}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        ${paymentButton}
+                                        ${ratingButton}
+                                        ${cancelButton}
+                                    </div>
                                 </div>
                                 <div class="text-end ms-3">
                                     <p class="mb-1"><strong>Estimated Cost:</strong> ₹${request.costEstimate.totalCost}</p>
@@ -635,6 +741,7 @@ async function loadUserRequests() {
                     </div>
                 `;
             });
+
             requestsList.innerHTML = requestsHTML;
         } else {
             requestsList.innerHTML = `
@@ -1197,7 +1304,7 @@ async function debugProviderData(requestId) {
     }
 }
 
-// Exclude a provider from the list
+// Exclude a provider from the list - UPDATED
 function excludeProvider(providerId) {
     // Add to excluded providers list
     if (!excludedProviders.includes(providerId)) {
@@ -1219,10 +1326,19 @@ function excludeProvider(providerId) {
         }, 300);
     }
     
-    // Show excluded providers info
-    const excludedInfo = document.getElementById('excludedProvidersInfo');
-    if (excludedInfo) {
-        excludedInfo.style.display = 'block';
+    // Determine service type and recalculate cost
+    let serviceType = null;
+    if (currentServiceData.fuel && currentServiceData.fuel.nearestProviders) {
+        const fuelProvider = currentServiceData.fuel.nearestProviders.find(p => p._id === providerId);
+        if (fuelProvider) serviceType = 'fuel';
+    }
+    if (!serviceType && currentServiceData.mechanic && currentServiceData.mechanic.nearestProviders) {
+        const mechanicProvider = currentServiceData.mechanic.nearestProviders.find(p => p._id === providerId);
+        if (mechanicProvider) serviceType = 'mechanic';
+    }
+    
+    if (serviceType) {
+        recalculateCostAfterExclusion(serviceType);
     }
     
     showAlert('Provider removed from your search results', 'info');
@@ -1590,5 +1706,271 @@ class NotificationManager {
 
 // Initialize notification manager
 const notificationManager = new NotificationManager();
+
+// Cancel service request
+async function cancelRequest(requestId) {
+    if (!confirm('Are you sure you want to cancel this service request?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/services/request/${requestId}/cancel`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('✅ Service request cancelled successfully', 'success');
+            // Refresh requests list
+            loadUserRequests();
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        console.error('Cancel request error:', error);
+        showAlert('❌ Error cancelling request: ' + error.message, 'danger');
+    }
+}
+
+// Update loadUserRequests function to include cancel buttons
+async function loadUserRequests() {
+    const requestsList = document.getElementById('requestsList');
+    if (!requestsList) return;
+
+    // Show skeleton loader
+    showSkeletonLoader(requestsList, 'requests');
+
+    try {
+        const response = await fetch('/api/services/my-requests');
+        const data = await response.json();
+
+        if (data.success && data.requests && data.requests.length > 0) {
+            let requestsHTML = '';
+
+            data.requests.forEach(request => {
+                const statusBadge = getStatusBadge(request.status);
+                const date = new Date(request.createdAt).toLocaleString();
+
+                // Add payment, rating, and cancel buttons
+                const paymentButton = request.status === 'completed' && request.paymentStatus !== 'paid' ?
+                    `<button class="btn btn-success btn-sm mt-1 btn-mobile" onclick="showPaymentModal('${request.requestId}', '${request.serviceType} - ${request.requestId}', ${request.costEstimate.totalCost})">
+                        💰 Pay Now
+                    </button>` : '';
+
+                const ratingButton = request.status === 'completed' && request.paymentStatus === 'paid' && !request.rating ?
+                    `<button class="btn btn-warning btn-sm mt-1 btn-mobile" onclick="showRatingModal('${request.requestId}')">
+                        ⭐ Rate
+                    </button>` : '';
+
+                // Add cancel button for pending and accepted requests
+                const cancelButton = (request.status === 'pending' || request.status === 'accepted') ?
+                    `<button class="btn btn-danger btn-sm mt-1 btn-mobile" onclick="cancelRequest('${request.requestId}')" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                        Cancel
+                    </button>` : '';
+
+                requestsHTML += `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title">
+                                        ${request.serviceType === 'fuel' ? '⛽' : '🔧'}
+                                        ${request.serviceType.charAt(0).toUpperCase() + request.serviceType.slice(1)} Assistance
+                                        <span class="badge ${statusBadge.class}">${statusBadge.text}</span>
+                                    </h6>
+                                    <p class="card-text mb-1 small">
+                                        <strong>Request ID:</strong> ${request.requestId}<br>
+                                        <strong>Date:</strong> ${date}<br>
+                                        ${request.serviceType === 'fuel' ?
+                        `<strong>Fuel:</strong> ${request.quantity}L ${request.fuelType}` :
+                        `<strong>Problem:</strong> ${request.problemDescription}`
+                    }
+                                    </p>
+                                    ${paymentButton}
+                                    ${ratingButton}
+                                    ${cancelButton}
+                                </div>
+                                <div class="text-end ms-3">
+                                    <p class="mb-1"><strong>Estimated Cost:</strong> ₹${request.costEstimate.totalCost}</p>
+                                    ${request.assignedProvider ?
+                        `<p class="mb-1 small text-success">Assigned to: ${request.assignedProvider.businessName}</p>` :
+                        '<p class="mb-1 small text-warning">Waiting for provider...</p>'
+                    }
+                                    ${request.paymentStatus === 'paid' ?
+                        `<p class="mb-1 small text-success">💰 Payment Completed</p>` :
+                        ''
+                    }
+                                    ${request.rating ?
+                        `<p class="mb-1 small text-warning">⭐ Rated: ${request.rating}/5</p>` :
+                        ''
+                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            requestsList.innerHTML = requestsHTML;
+        } else {
+            requestsList.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-muted">No service requests yet.</p>
+                    <p class="small text-muted">Create your first request using the buttons above.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading requests:', error);
+        requestsList.innerHTML = `
+            <div class="alert alert-danger">
+                <h6>❌ Error loading requests</h6>
+                <p class="mb-0 small">Please try refreshing the page.</p>
+            </div>
+        `;
+    }
+}
+
+// Recalculate cost when providers are excluded
+function recalculateCostAfterExclusion(serviceType) {
+    const serviceData = currentServiceData[serviceType];
+    if (!serviceData || !serviceData.nearestProviders) return;
+
+    // Filter out excluded providers
+    const availableProviders = serviceData.nearestProviders.filter(
+        provider => !excludedProviders.includes(provider._id)
+    );
+
+    // If no providers left, set cost to zero
+    if (availableProviders.length === 0) {
+        const costDiv = serviceType === 'fuel' ? 
+            document.getElementById('fuelCostBreakdown') : 
+            document.getElementById('mechanicCostBreakdown');
+        
+        const submitBtn = serviceType === 'fuel' ?
+            document.getElementById('submitFuelBtn') :
+            document.getElementById('submitMechBtn');
+
+        costDiv.innerHTML = `
+            <div class="alert alert-warning">
+                <h6>⚠️ No Service Providers Available</h6>
+                <p class="mb-2">All nearby providers have been excluded from your search.</p>
+                <p class="mb-0 small">Estimated cost: ₹0</p>
+            </div>
+        `;
+
+        // Hide and disable submit button
+        submitBtn.style.display = 'none';
+        submitBtn.disabled = true;
+
+        // Update service data to reflect no available providers
+        serviceData.nearestProviders = [];
+        serviceData.costEstimate = {
+            fuelCost: 0,
+            assistanceFee: 0,
+            travelFee: 0,
+            totalCost: 0
+        };
+
+        showAlert('All providers excluded. Cost set to ₹0.', 'info');
+    } else {
+        // Recalculate with remaining providers
+        const nearestProvider = availableProviders[0]; // Get the closest available provider
+        
+        if (serviceType === 'fuel') {
+            const form = document.getElementById('fuelForm');
+            const formData = new FormData(form);
+            const quantity = parseInt(formData.get('quantity'));
+            
+            const costEstimate = {
+                fuelCost: Math.round(nearestProvider.pricing.fuelPrice * quantity),
+                assistanceFee: nearestProvider.pricing.assistanceFee,
+                travelFee: Math.round(nearestProvider.distance * 5), // ₹5 per km
+                totalCost: 0
+            };
+            costEstimate.totalCost = costEstimate.fuelCost + costEstimate.assistanceFee + costEstimate.travelFee;
+            
+            // Update displayed cost
+            updateFuelCostDisplay(costEstimate);
+            serviceData.costEstimate = costEstimate;
+        } else {
+            // Mechanic cost recalculation
+            const costEstimate = {
+                assistanceFee: nearestProvider.pricing.assistanceFee,
+                travelFee: Math.round(nearestProvider.distance * 5), // ₹5 per km
+                totalCost: 0
+            };
+            costEstimate.totalCost = costEstimate.assistanceFee + costEstimate.travelFee;
+            
+            // Update displayed cost
+            updateMechanicCostDisplay(costEstimate);
+            serviceData.costEstimate = costEstimate;
+        }
+    }
+}
+
+// Update fuel cost display
+function updateFuelCostDisplay(cost) {
+    const costDiv = document.getElementById('fuelCostBreakdown');
+    costDiv.innerHTML = `
+        <div class="row mb-2">
+            <div class="col-6">Fuel Cost:</div>
+            <div class="col-6 text-end">₹${cost.fuelCost}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">Assistance Fee:</div>
+            <div class="col-6 text-end">₹${cost.assistanceFee}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">Travel Fee:</div>
+            <div class="col-6 text-end">₹${cost.travelFee}</div>
+        </div>
+        <hr>
+        <div class="row fw-bold fs-5">
+            <div class="col-6">Total Estimated Cost:</div>
+            <div class="col-6 text-end text-success">₹${cost.totalCost}</div>
+        </div>
+        <p class="small text-muted mt-2">* This is an estimate. Final cost may vary slightly.</p>
+        
+        <!-- Excluded Providers Info -->
+        <div id="excludedProvidersInfo" class="mt-3">
+            <div class="alert alert-info">
+                <small>📝 Some providers have been excluded from your search.</small>
+            </div>
+        </div>
+    `;
+}
+
+// Update mechanic cost display
+function updateMechanicCostDisplay(cost) {
+    const costDiv = document.getElementById('mechanicCostBreakdown');
+    costDiv.innerHTML = `
+        <div class="row mb-2">
+            <div class="col-6">Service Fee:</div>
+            <div class="col-6 text-end">₹${cost.assistanceFee}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-6">Travel Fee:</div>
+            <div class="col-6 text-end">₹${cost.travelFee}</div>
+        </div>
+        <hr>
+        <div class="row fw-bold fs-5">
+            <div class="col-6">Total Estimated Cost:</div>
+            <div class="col-6 text-end text-success">₹${cost.totalCost}</div>
+        </div>
+        <p class="small text-muted mt-2">* Final cost may vary based on actual repairs needed</p>
+        
+        <!-- Excluded Providers Info -->
+        <div id="excludedProvidersInfo" class="mt-3">
+            <div class="alert alert-info">
+                <small>📝 Some providers have been excluded from your search.</small>
+            </div>
+        </div>
+    `;
+}
 
 // You can call this function when you detect SMS failures in your API responses

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   geocodeAddress,
   createServiceRequest,
@@ -10,15 +11,21 @@ const {
   getRequestDetails,
   uploadProblemPhotos,
   updateProblemDiagnosis,
-  getProblemPhotos
+  getProblemPhotos,
+  findNearbyProviders,
+  cancelServiceRequest
 } = require("../controllers/serviceController");
 
 const { protect } = require("../middleware/authMiddleware");
 const { problemUpload } = require('../config/upload');
- 
+
 // @route   POST /api/services/geocode
 // @desc    Geocode coordinates to address
 router.post("/geocode", protect, geocodeAddress);
+
+// @route   POST /api/services/find-providers
+// @desc    Find nearby providers without creating service request
+router.post("/find-providers", protect, findNearbyProviders);
 
 // @route   POST /api/services/request
 // @desc    Create new service request
@@ -39,6 +46,10 @@ router.put("/request/:requestId/assign", protect, assignProviderToRequest);
 // @route   PUT /api/services/request/:requestId/status
 // @desc    Update request status
 router.put("/request/:requestId/status", protect, updateRequestStatus);
+
+// @route   PUT /api/services/request/:requestId/cancel
+// @desc    Cancel service request
+router.put("/request/:requestId/cancel", protect, cancelServiceRequest);
 
 // @route   GET /api/services/request/:requestId
 // @desc    Get request details for tracking
@@ -73,7 +84,9 @@ router.get("/test", protect, (req, res) => {
     features: {
       photoUpload: "available",
       diagnosis: "available",
-      geocoding: "available"
+      geocoding: "available",
+      findProviders: "available",
+      cancelRequest: "available"
     }
   });
 });

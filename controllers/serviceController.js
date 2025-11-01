@@ -25,7 +25,7 @@ function generateRequestId() {
   return `REQ-${timestamp}-${random}`.toUpperCase();
 }
 
-// @desc   Find nearest providers using MongoDB geospatial queries
+// Find nearest providers using MongoDB geospatial queries
 const findNearestProviders = async (longitude, latitude, serviceType, maxDistance = 20000) => {
   try {
     console.log(`🔍 Searching for ${serviceType} providers near [${longitude}, ${latitude}]`);
@@ -45,7 +45,7 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
       }
     })
       .populate('user', 'name phone')
-      .select('+businessPhotos') // ADD THIS LINE to include businessPhotos
+      .select('+businessPhotos')
       .limit(5);
     
     console.log(`📍 MongoDB geospatial query found ${providers.length} ${serviceType} providers`);
@@ -59,11 +59,10 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
         provider.location.coordinates[0]
       );
       
-      // Include businessPhotos in the returned data
       return { 
         ...provider.toObject(), 
         distance: Math.round(distance * 10) / 10,
-        businessPhotos: provider.businessPhotos || [] // Ensure businessPhotos is included
+        businessPhotos: provider.businessPhotos || []
       };
     });
 
@@ -74,7 +73,78 @@ const findNearestProviders = async (longitude, latitude, serviceType, maxDistanc
   }
 };
 
-// In serviceController.js - Update the geocodeAddress function
+// @desc   Find nearby providers without creating service request
+exports.findNearbyProviders = async (req, res) => {
+  try {
+    console.log("=== FIND NEARBY PROVIDERS ===");
+    const { serviceType, latitude, longitude, fuelType, quantity } = req.body;
+    const user = req.user;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        error: "Location is required."
+      });
+    }
+
+    // Use MongoDB geospatial query to find nearest providers
+    const nearbyProviders = await findNearestProviders(
+      parseFloat(longitude),
+      parseFloat(latitude),
+      serviceType
+    );
+
+    console.log(`📍 Found ${nearbyProviders.length} nearby providers within 20km`);
+
+    // Calculate cost estimate ONLY when providers are found
+    let costEstimate = null;
+    if (nearbyProviders.length > 0) {
+      const fuelPrices = {
+        petrol: 96.7,
+        diesel: 89.6,
+        cng: 75.3
+      };
+      
+      // For fuel service, calculate fuel cost
+      let fuelCost = 0;
+      if (serviceType === 'fuel' && quantity && fuelType) {
+        fuelCost = fuelPrices[fuelType] * parseInt(quantity);
+      }
+      
+      const assistanceFee = nearbyProviders[0].pricing.assistanceFee;
+      const travelFee = Math.round(nearbyProviders[0].pricing.travelFeePerKm * 5);
+      const totalCost = Math.round(fuelCost + assistanceFee + travelFee);
+      
+      costEstimate = {
+        fuelCost: Math.round(fuelCost),
+        assistanceFee: assistanceFee,
+        travelFee: travelFee,
+        totalCost: totalCost
+      };
+      console.log("💰 Cost estimate calculated:", costEstimate);
+    }
+
+    res.json({
+      success: true,
+      nearestProviders: nearbyProviders,
+      costEstimate: costEstimate || {
+        fuelCost: 0,
+        assistanceFee: 0,
+        travelFee: 0,
+        totalCost: 0
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Find nearby providers error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to find nearby providers: " + error.message
+    });
+  }
+};
+
+// @desc   Geocode coordinates to address
 exports.geocodeAddress = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
@@ -123,6 +193,7 @@ exports.geocodeAddress = async (req, res) => {
     });
   }
 };
+
 // @desc   Create new service request
 exports.createServiceRequest = async (req, res) => {
   try {
@@ -593,6 +664,56 @@ exports.updateProblemDiagnosis = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to update diagnosis: " + error.message
+    });
+  }
+};
+
+// @desc   Cancel service request
+exports.cancelServiceRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const user = req.user;
+
+    console.log(`❌ Canceling request ${requestId} by user ${user.email}`);
+
+    const serviceRequest = await ServiceRequest.findOne({ 
+      requestId: requestId,
+      user: user._id 
+    });
+
+    if (!serviceRequest) {
+      return res.status(404).json({
+        success: false,
+        error: "Service request not found"
+      });
+    }
+
+    // Check if request can be cancelled (only pending or accepted status)
+    if (!['pending', 'accepted'].includes(serviceRequest.status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot cancel request with status: ${serviceRequest.status}`
+      });
+    }
+
+    // Update request status
+    serviceRequest.status = 'cancelled';
+    serviceRequest.cancelledAt = new Date();
+    await serviceRequest.save();
+
+    console.log(`✅ Request ${requestId} cancelled successfully`);
+
+    res.json({
+      success: true,
+      message: "Service request cancelled successfully",
+      request: serviceRequest
+    });
+
+  } catch (error) {
+    console.error("❌ Cancel service request error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to cancel service request: " + error.message
     });
   }
 };
