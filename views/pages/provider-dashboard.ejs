@@ -161,10 +161,11 @@
                                                                             <% } %>
                                                     </td>
                                                     <td>
-                                                        <%= request.user.name %>
+                                                        <%= request.user ? request.user.name : 'Customer' %>
                                                             <br>
                                                             <small class="text-muted">
-                                                                📞 <%= request.user.phone %>
+                                                                📞 <%= request.user ? request.user.phone
+                                                                    : 'Phone not available' %>
                                                             </small>
                                                     </td>
                                                     <td>

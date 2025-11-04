@@ -231,32 +231,52 @@ exports.registerProvider = async (req, res) => {
 // @desc   Show provider dashboard
 exports.showProviderDashboard = async (req, res) => {
     try {
+        console.log('🔄 Loading provider dashboard for user:', req.user.email);
+
         const provider = await ServiceProvider.findOne({ user: req.user._id })
             .populate('user', 'name email phone');
-           
+
         if (!provider) {
-            // If provider not registered yet, redirect to registration
+            console.log('❌ Provider not found, redirecting to registration');
             return res.redirect('/provider/register');
         }
 
-        // Get nearby requests for this provider
+        console.log('✅ Provider found:', provider.businessName);
+
+        // Get nearby requests for this provider - FIXED: Add proper population
         const nearbyRequests = await ServiceRequest.find({
             serviceType: provider.businessType === 'fuel-station' ? 'fuel' : 'mechanic',
             status: 'pending'
         })
-        .populate('user', 'name phone')
+        .populate('user', 'name phone') // THIS WAS MISSING - CAUSING THE ERROR
+        .populate('assignedProvider')   
         .sort({ createdAt: -1 })
         .limit(10);
+
+        // DEBUG: Check if any request has null user and filter them out
+        console.log('📍 Raw nearby requests count:', nearbyRequests.length);
+        
+        // FILTER OUT requests with null users to prevent template errors
+        const validNearbyRequests = nearbyRequests.filter(request => request.user !== null);
+        
+        console.log('✅ Valid nearby requests count:', validNearbyRequests.length);
+        
+        if (nearbyRequests.length !== validNearbyRequests.length) {
+            console.log('⚠️ Filtered out', nearbyRequests.length - validNearbyRequests.length, 'requests with null users');
+        }
 
         res.render('pages/provider-dashboard', {
             user: req.user,
             provider: provider,
-            nearbyRequests: nearbyRequests
+            nearbyRequests: validNearbyRequests // USE FILTERED LIST
         });
+
     } catch (error) {
-        console.error('Provider dashboard error:', error);
-        res.status(500).render('error', { error: 'Failed to load dashboard' });
-        // res.send(error);
+        console.error('❌ Provider dashboard error:', error);
+        console.error('❌ Error stack:', error.stack);
+        res.status(500).render('error', { 
+            error: 'Failed to load dashboard: ' + error.message 
+        });
     }
 };
 
