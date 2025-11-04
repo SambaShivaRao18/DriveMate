@@ -254,9 +254,9 @@ exports.showProviderDashboard = async (req, res) => {
             nearbyRequests: nearbyRequests
         });
     } catch (error) {
-        // console.error('Provider dashboard error:', error);
-        // res.status(500).render('error', { error: 'Failed to load dashboard' });
-        res.send(error);
+        console.error('Provider dashboard error:', error);
+        res.status(500).render('error', { error: 'Failed to load dashboard' });
+        // res.send(error);
     }
 };
 
